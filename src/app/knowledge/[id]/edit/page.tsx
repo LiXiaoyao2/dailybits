@@ -87,6 +87,8 @@ export default function EditKnowledgeBankPage({
   const [savingPrompt, setSavingPrompt] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [editing, setEditing] = React.useState<Record<string, string>>({});
+  const [editTitle, setEditTitle] = React.useState("");
+  const [savingTitle, setSavingTitle] = React.useState(false);
   const [editVisibility, setEditVisibility] =
     React.useState<BankVisibility>("PRIVATE");
   const [editDepartments, setEditDepartments] = React.useState<string[]>([]);
@@ -107,6 +109,7 @@ export default function EditKnowledgeBankPage({
         return;
       }
       setBank(data);
+      setEditTitle(typeof data.title === "string" ? data.title : "");
       setPrompt(data.generationPrompt || DEFAULT_KNOWLEDGE_CARD_PROMPT);
       setEditVisibility(data.visibility ?? "PRIVATE");
       setEditDepartments(
@@ -131,6 +134,39 @@ export default function EditKnowledgeBankPage({
   React.useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const saveTitle = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+    if (!bank) return;
+    const title = editTitle.trim();
+    if (!title) {
+      toast.error("知识库标题不能为空");
+      return;
+    }
+    if (title === bank.title) return;
+    setSavingTitle(true);
+    try {
+      const res = await fetch(`/api/knowledge-banks/${bankId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editTitle.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "保存失败");
+        return;
+      }
+      const savedTitle = typeof data.title === "string" ? data.title : title;
+      setBank((prev) => (prev ? { ...prev, title: savedTitle } : prev));
+      setEditTitle(savedTitle);
+      toast.success("知识库标题已更新");
+      router.refresh();
+    } catch {
+      toast.error("保存失败，请稍后重试");
+    } finally {
+      setSavingTitle(false);
+    }
+  };
 
   const addDepartment = () => {
     const value = deptDraft.trim();
@@ -330,6 +366,7 @@ export default function EditKnowledgeBankPage({
   const manualContents = draftPoints
     .map((point) => point.content.trim())
     .filter(Boolean);
+  const titleDraft = editTitle.trim();
 
   return (
     <div className="page-enter space-y-6">
@@ -354,6 +391,40 @@ export default function EditKnowledgeBankPage({
           返回知识库
         </Button>
       </div>
+
+      {isCreator ? (
+        <form
+          onSubmit={saveTitle}
+          className="max-w-5xl rounded-lg border bg-card p-4"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <h2 className="text-sm font-medium text-foreground">基础信息</h2>
+              <p className="text-xs text-muted-foreground">
+                修改标题不会影响已有订阅；如果此知识库来自本地 JSON 同步，下次同步会以 JSON 标题为准。
+              </p>
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={savingTitle || !titleDraft || titleDraft === bank.title}
+              className="w-full sm:w-auto"
+            >
+              {savingTitle ? "保存中..." : "保存标题"}
+            </Button>
+          </div>
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="knowledge-bank-title">知识库标题</Label>
+            <Input
+              id="knowledge-bank-title"
+              value={editTitle}
+              onChange={(event) => setEditTitle(event.target.value)}
+              placeholder="请输入知识库标题"
+              autoComplete="off"
+            />
+          </div>
+        </form>
+      ) : null}
 
       <div className="max-w-5xl">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0">
