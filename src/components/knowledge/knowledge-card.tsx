@@ -56,7 +56,7 @@ export function KnowledgeCard({
   const [pushTimes, setPushTimes] = useState<string[]>([
     ...DEFAULT_KNOWLEDGE_PUSH_TIMES,
   ]);
-  const [newTime, setNewTime] = useState("09:00");
+  const [newTime, setNewTime] = useState(DEFAULT_KNOWLEDGE_PUSH_TIMES[0]);
   const [loading, setLoading] = useState(false);
 
   const atSubLimit = subscriptionCount >= MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET;

@@ -8,10 +8,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "prescheduler": "prisma generate",
     "scheduler": "tsx src/scheduler/index.ts",
+    "presync:banks": "prisma generate",
     "sync:banks": "tsx scripts/sync-question-banks.ts",
+    "presync:question-banks": "prisma generate",
     "sync:question-banks": "tsx scripts/sync-question-banks.ts",
+    "presync:questions-only": "prisma generate",
     "sync:questions-only": "tsx scripts/sync-question-banks.ts --questions-only",
+    "presync:knowledge-banks": "prisma generate",
     "sync:knowledge-banks": "tsx scripts/sync-question-banks.ts --knowledge-only"
   },
   "dependencies": {

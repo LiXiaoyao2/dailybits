@@ -8,6 +8,7 @@ import {
   type Prisma,
   type Visibility,
 } from "../src/generated/prisma/client.js";
+import { parseJsonText } from "./sync-json.js";
 
 type SyncDirectory = {
   directory: string;
@@ -1119,7 +1120,7 @@ async function main() {
 
     for (const file of files) {
       const rawText = await fs.readFile(file.filePath, "utf8");
-      const parsed = parseBankFile(file, JSON.parse(rawText));
+      const parsed = parseBankFile(file, parseJsonText(rawText, file.fileName));
 
       if (!isAllowedByKindFilter(parsed, options)) {
         ignored++;
