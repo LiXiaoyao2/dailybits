@@ -53,8 +53,7 @@ export interface DigestPushPayload {
 export interface KnowledgePushPayload {
   receiver: string;
   title: string;
-  content: string;
-  question?: string;
+  items: string[];
   knowledgeBankId: string;
   knowledgePointId: string;
 }

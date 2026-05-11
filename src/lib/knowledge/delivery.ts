@@ -99,8 +99,11 @@ export function buildKnowledgePushPayload(input: {
   knowledgePointId: string;
 }): KnowledgePushPayload {
   return {
-    ...input,
-    question: input.content,
+    receiver: input.receiver,
+    title: input.title,
+    items: [input.content],
+    knowledgeBankId: input.knowledgeBankId,
+    knowledgePointId: input.knowledgePointId,
   };
 }
 

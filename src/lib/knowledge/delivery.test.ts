@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildKnowledgePushPayload } from "./delivery";
 
-test("buildKnowledgePushPayload includes a question alias for legacy push adapters", () => {
+test("buildKnowledgePushPayload sends knowledge cards as a single digest-style item", () => {
   assert.deepEqual(
     buildKnowledgePushPayload({
       receiver: "user-1",
@@ -14,8 +14,7 @@ test("buildKnowledgePushPayload includes a question alias for legacy push adapte
     {
       receiver: "user-1",
       title: "Knowledge Bank",
-      content: "Knowledge card content",
-      question: "Knowledge card content",
+      items: ["Knowledge card content"],
       knowledgeBankId: "bank-1",
       knowledgePointId: "point-1",
     },
