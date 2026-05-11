@@ -2,13 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { buildPushHistoryPage } from "@/lib/push/history";
 
 const PAGE_SIZE = 10;
-
-function truncate(str: string, maxLen: number): string {
-  if (str.length <= maxLen) return str;
-  return str.slice(0, maxLen) + "…";
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,12 +16,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
 
-    const [logs, total] = await Promise.all([
+    const take = page * PAGE_SIZE;
+    const [questionLogs, questionTotal, knowledgeLogs, knowledgeTotal] = await Promise.all([
       prisma.pushLog.findMany({
         where: { targetType: "USER", targetId: session.user.id },
         orderBy: { pushedAt: "desc" },
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        take,
         select: {
           pushedAt: true,
           question: {
@@ -40,22 +36,41 @@ export async function GET(request: NextRequest) {
       prisma.pushLog.count({
         where: { targetType: "USER", targetId: session.user.id },
       }),
+      prisma.knowledgePushLog.findMany({
+        where: { targetType: "USER", targetId: session.user.id },
+        orderBy: { pushedAt: "desc" },
+        take,
+        select: {
+          pushedAt: true,
+          contentSnapshot: true,
+          knowledgePoint: {
+            select: {
+              bank: { select: { title: true } },
+            },
+          },
+        },
+      }),
+      prisma.knowledgePushLog.count({
+        where: { targetType: "USER", targetId: session.user.id },
+      }),
     ]);
 
-    const totalPages = Math.ceil(total / PAGE_SIZE);
-
-    const formattedLogs = logs.map((log) => ({
-      pushedAt: log.pushedAt,
-      bankName: log.question.bank.title,
-      questionExcerpt: truncate(log.question.content, 80),
-      correctAnswer: log.question.correctAnswer,
-    }));
+    const history = buildPushHistoryPage({
+      questionLogs,
+      knowledgeLogs: knowledgeLogs.map((log) => ({
+        pushedAt: log.pushedAt,
+        contentSnapshot: log.contentSnapshot,
+        bank: log.knowledgePoint.bank,
+      })),
+      page,
+      pageSize: PAGE_SIZE,
+    });
 
     return NextResponse.json({
-      logs: formattedLogs,
-      total,
+      logs: history.logs,
+      total: questionTotal + knowledgeTotal,
       page,
-      totalPages,
+      totalPages: Math.ceil((questionTotal + knowledgeTotal) / PAGE_SIZE),
     });
   } catch (error) {
     console.error("[GET /api/push/logs]", error);

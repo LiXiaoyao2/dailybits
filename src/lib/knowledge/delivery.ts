@@ -81,7 +81,27 @@ export async function pushKnowledgeToTarget(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    console.error(
+      `[Knowledge] Push failed: HTTP ${response.status} ${response.statusText}` +
+        (body ? ` ${body.slice(0, 300)}` : ""),
+    );
+  }
   return response.ok;
+}
+
+export function buildKnowledgePushPayload(input: {
+  receiver: string;
+  title: string;
+  content: string;
+  knowledgeBankId: string;
+  knowledgePointId: string;
+}): KnowledgePushPayload {
+  return {
+    ...input,
+    question: input.content,
+  };
 }
 
 export async function pushKnowledgeSubscription(
@@ -113,13 +133,15 @@ export async function pushKnowledgeSubscription(
     sub.targetType as TargetType,
     sub.targetId,
   );
-  const success = await pushKnowledgeToTarget({
-    receiver,
-    title: sub.bank.title,
-    content: point.content,
-    knowledgeBankId: sub.bankId,
-    knowledgePointId: point.id,
-  });
+  const success = await pushKnowledgeToTarget(
+    buildKnowledgePushPayload({
+      receiver,
+      title: sub.bank.title,
+      content: point.content,
+      knowledgeBankId: sub.bankId,
+      knowledgePointId: point.id,
+    }),
+  );
 
   if (!success) return false;
 

@@ -54,6 +54,7 @@ export interface KnowledgePushPayload {
   receiver: string;
   title: string;
   content: string;
+  question?: string;
   knowledgeBankId: string;
   knowledgePointId: string;
 }
