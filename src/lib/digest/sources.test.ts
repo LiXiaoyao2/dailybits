@@ -101,7 +101,7 @@ test("daily digest limit defaults to 12 overview source items", () => {
   }
 });
 
-test("daily digest limit is capped to three pages of four rows", () => {
+test("daily digest limit is capped to four pages of three rows", () => {
   const original = process.env.DIGEST_ITEM_LIMIT;
   process.env.DIGEST_ITEM_LIMIT = "99";
 
@@ -116,7 +116,7 @@ test("daily digest limit is capped to three pages of four rows", () => {
   }
 });
 
-test("GitHub overview renders three table strings without language or fork details", () => {
+test("GitHub overview renders four table strings with stars under the project name", () => {
   const pages = formatGithubOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
       fullName: `owner/repo-${index + 1}`,
@@ -130,11 +130,18 @@ test("GitHub overview renders three table strings without language or fork detai
     })),
   );
 
-  assert.equal(pages.length, 3);
-  assert.match(pages[0], /GitHub Trending 总览 1\/3/);
-  assert.match(pages[0], /\| 项目 \| Star 趋势 \| 一句话总结 \|/);
-  assert.match(pages[0], /今日 \+56/);
-  assert.doesNotMatch(pages.join("\n"), /语言|TypeScript|Fork|fork|🍴|99/);
+  assert.equal(pages.length, 4);
+  assert.match(pages[0], /GitHub Trending 总览 1\/4/);
+  assert.match(pages[0], /\| 项目 \| 一句话总结 \|/);
+  assert.match(
+    pages[0],
+    /\[owner\/repo-1\]\(https:\/\/github\.com\/owner\/repo-1\)<br>⭐ 1,234 \/ 今日 \+56/,
+  );
+  assert.equal(
+    pages[0].split("\n").filter((line) => line.startsWith("| [owner/repo-")).length,
+    3,
+  );
+  assert.doesNotMatch(pages.join("\n"), /语言|TypeScript|Star 趋势|Fork|fork|🍴|99/);
 });
 
 test("AI news overview omits source, category, and daily columns", () => {
@@ -148,13 +155,17 @@ test("AI news overview omits source, category, and daily columns", () => {
     })),
   );
 
-  assert.equal(pages.length, 3);
-  assert.match(pages[0], /AI 新闻总览 1\/3/);
+  assert.equal(pages.length, 4);
+  assert.match(pages[0], /AI 新闻总览 1\/4/);
   assert.match(pages[0], /\| 标题 \| 一句话摘要 \|/);
+  assert.equal(
+    pages[0].split("\n").filter((line) => line.startsWith("| [AI news ")).length,
+    3,
+  );
   assert.doesNotMatch(pages.join("\n"), /来源|AIHOT|分类|日报/);
 });
 
-test("arXiv overview omits author and category columns", () => {
+test("arXiv overview renders four table strings and omits author and category columns", () => {
   const pages = formatArxivOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
       title: `Paper ${index + 1}`,
@@ -166,8 +177,12 @@ test("arXiv overview omits author and category columns", () => {
     })),
   );
 
-  assert.equal(pages.length, 3);
-  assert.match(pages[0], /arXiv 论文总览 1\/3/);
+  assert.equal(pages.length, 4);
+  assert.match(pages[0], /arXiv 论文总览 1\/4/);
   assert.match(pages[0], /\| 论文 \| 发布时间 \| 一句话摘要 \|/);
+  assert.equal(
+    pages[0].split("\n").filter((line) => line.startsWith("| [Paper ")).length,
+    3,
+  );
   assert.doesNotMatch(pages.join("\n"), /作者|分类|Alice|Bob|cs\.AI/);
 });

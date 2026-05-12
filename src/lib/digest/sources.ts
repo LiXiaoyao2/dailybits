@@ -93,8 +93,8 @@ const DEFAULT_README_SUMMARY_MAX_CHARS = 5000;
 const DEFAULT_README_SUMMARY_CONCURRENCY = 2;
 const DEFAULT_DIGEST_AI_CONCURRENCY = 3;
 const DEFAULT_DIGEST_ITEM_LIMIT = 12;
-const DIGEST_OVERVIEW_PAGE_SIZE = 4;
-const DIGEST_OVERVIEW_PAGE_COUNT = 3;
+const DIGEST_OVERVIEW_PAGE_SIZE = 3;
+const DIGEST_OVERVIEW_PAGE_COUNT = 4;
 const DIGEST_OVERVIEW_ITEM_LIMIT =
   DIGEST_OVERVIEW_PAGE_SIZE * DIGEST_OVERVIEW_PAGE_COUNT;
 const DEFAULT_ARXIV_FETCH_ATTEMPTS = 2;
@@ -178,6 +178,12 @@ function formatGithubStarTrend(repo: GithubRepo): string {
   return parts.join(" / ") || "-";
 }
 
+function formatGithubProjectCell(repo: GithubRepo): string {
+  const project = markdownLink(repo.fullName, repo.url);
+  const starTrend = formatGithubStarTrend(repo);
+  return starTrend === "-" ? project : `${project}<br>${starTrend}`;
+}
+
 function clampDigestItemLimit(value: number): number {
   if (!Number.isFinite(value) || value <= 0) return DEFAULT_DIGEST_ITEM_LIMIT;
   return Math.min(Math.floor(value), DIGEST_OVERVIEW_ITEM_LIMIT);
@@ -195,10 +201,9 @@ export function getDigestItemLimit(): number {
 export function formatGithubOverviewPages(repos: GithubRepo[]): string[] {
   return formatOverviewTables(
     "GitHub Trending 总览",
-    ["项目", "Star 趋势", "一句话总结"],
+    ["项目", "一句话总结"],
     repos.map((repo) => [
-      escapeMarkdownTableCell(markdownLink(repo.fullName, repo.url)),
-      escapeMarkdownTableCell(formatGithubStarTrend(repo)),
+      escapeMarkdownTableCell(formatGithubProjectCell(repo)),
       escapeMarkdownTableCell(oneLineSummary(repo.aiSummary || repo.description, 88)),
     ]),
   );
