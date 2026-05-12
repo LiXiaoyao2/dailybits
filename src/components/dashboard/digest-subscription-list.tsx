@@ -4,7 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import type { ComponentType } from "react";
-import { Bell, FileText, Github, Newspaper, Pencil, Trash2 } from "lucide-react";
+import {
+  Bell,
+  FileText,
+  Github,
+  Newspaper,
+  Pencil,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -294,11 +302,18 @@ export function DigestSubscriptionList({
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
                   <Icon className="size-4" />
                 </div>
-                <CardTitle>{option.title}</CardTitle>
+                <CardTitle className="flex min-w-0 flex-wrap items-center gap-2">
+                  {option.title}
+                  <Badge
+                    variant="outline"
+                    className="gap-1 border-primary/20 bg-primary/5 text-primary"
+                    aria-label={`${option.title} ${subscriberCounts[option.type]} 人已订阅`}
+                  >
+                    <Users className="size-3" />
+                    {subscriberCounts[option.type]} 人已订阅
+                  </Badge>
+                </CardTitle>
                 <CardDescription>{option.description}</CardDescription>
-                <div className="text-xs text-muted-foreground">
-                  {subscriberCounts[option.type]} 人已订阅
-                </div>
                 <CardAction>
                   {sub ? (
                     <Badge variant="secondary">已订阅</Badge>
