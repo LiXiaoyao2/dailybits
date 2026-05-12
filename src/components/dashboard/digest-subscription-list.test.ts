@@ -11,5 +11,5 @@ const source = readFileSync(
 
 test("digest subscription cards render per-type subscriber counts", () => {
   assert.match(source, /subscriberCounts/);
-  assert.match(source, /个目标订阅/);
+  assert.match(source, /人已订阅/);
 });

@@ -297,7 +297,7 @@ export function DigestSubscriptionList({
                 <CardTitle>{option.title}</CardTitle>
                 <CardDescription>{option.description}</CardDescription>
                 <div className="text-xs text-muted-foreground">
-                  {subscriberCounts[option.type]} 个目标订阅
+                  {subscriberCounts[option.type]} 人已订阅
                 </div>
                 <CardAction>
                   {sub ? (
