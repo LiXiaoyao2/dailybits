@@ -6,6 +6,8 @@ import {
   formatArxivOverviewPages,
   formatGithubOverviewPages,
   getAiNewsDigestCacheDate,
+  getAiNewsTranslationInstruction,
+  getArxivAbstractSummaryInstruction,
   getDigestItemLimit,
   getGithubReadmeSummaryInstruction,
   getGithubReadmeSummaryMaxChars,
@@ -42,12 +44,16 @@ test("GitHub README summary input trims long README content before calling the L
   assert.equal(input.includes("Language: TypeScript"), true);
 });
 
-test("GitHub README summary prompt requires Chinese 3 to 5 sentence output", () => {
+test("digest AI prompts require concise Chinese 3 to 4 sentence output", () => {
   const instruction = getGithubReadmeSummaryInstruction();
+  const newsInstruction = getAiNewsTranslationInstruction();
+  const arxivInstruction = getArxivAbstractSummaryInstruction();
 
   assert.match(instruction, /中文|简体中文/);
-  assert.match(instruction, /3\s*到\s*5\s*句/);
+  assert.match(instruction, /3\s*到\s*4\s*句/);
   assert.match(instruction, /不要输出 Markdown/);
+  assert.match(newsInstruction, /3\s*到\s*4\s*句/);
+  assert.match(arxivInstruction, /3\s*到\s*4\s*句/);
 });
 
 test("AIHOT daily cache date waits until the daily report is ready", () => {

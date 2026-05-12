@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { buildDigestSubscriptionCounts } from "@/lib/digest/subscription-counts";
 import { prisma } from "@/lib/prisma";
 import { getSubscriptionReuseAction } from "@/lib/subscriptions/reuse";
 import {
@@ -58,19 +59,27 @@ export async function GET(
 ) {
   try {
     const { groupId } = await context.params;
-    const subscriptions = await prisma.digestSubscription.findMany({
-      where: {
-        targetType: "GROUP",
-        targetId: groupId,
-        isActive: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const [subscriptions, countRows] = await Promise.all([
+      prisma.digestSubscription.findMany({
+        where: {
+          targetType: "GROUP",
+          targetId: groupId,
+          isActive: true,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.digestSubscription.groupBy({
+        by: ["digestType"],
+        where: { isActive: true },
+        _count: { _all: true },
+      }),
+    ]);
 
     return NextResponse.json({
       subscriptions,
       count: subscriptions.length,
       limit: MAX_DIGEST_SUBSCRIPTIONS_PER_TARGET,
+      subscriberCounts: buildDigestSubscriptionCounts(countRows),
     });
   } catch (error) {
     console.error("[GET /api/group/[groupId]/digest-subscriptions]", error);

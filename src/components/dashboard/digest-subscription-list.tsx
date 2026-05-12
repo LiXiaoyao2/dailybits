@@ -17,6 +17,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  DIGEST_TYPES,
+  type DigestSubscriptionCounts,
+} from "@/lib/digest/subscription-counts";
 import type { DigestType, TargetType } from "@/types";
 
 interface DigestSubscription {
@@ -45,7 +49,7 @@ const DIGEST_OPTIONS: DigestOption[] = [
   {
     type: "GITHUB_TRENDING",
     title: "GitHub Trending",
-    description: "每日趋势项目、star、语言和项目摘要。",
+    description: "每日趋势项目、star 增长和项目摘要。",
     defaultTime: "09:00",
     icon: Github,
   },
@@ -59,14 +63,31 @@ const DIGEST_OPTIONS: DigestOption[] = [
   {
     type: "ARXIV_AI_PAPERS",
     title: "arXiv AI 论文",
-    description: "最新 AI 相关论文、作者、分类和摘要。",
+    description: "最新 AI 相关论文、发布时间和摘要。",
     defaultTime: "09:40",
     icon: FileText,
   },
 ];
 
+const DEFAULT_SUBSCRIBER_COUNTS = Object.fromEntries(
+  DIGEST_TYPES.map((digestType) => [digestType, 0]),
+) as DigestSubscriptionCounts;
+
 function getTime(sub?: DigestSubscription, option?: DigestOption): string {
   return sub?.pushTimes[0] ?? option?.defaultTime ?? "09:00";
+}
+
+function parseSubscriberCounts(value: unknown): DigestSubscriptionCounts | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const counts = (value as { subscriberCounts?: unknown }).subscriberCounts;
+  if (!counts || typeof counts !== "object" || Array.isArray(counts)) return null;
+
+  return Object.fromEntries(
+    DIGEST_TYPES.map((digestType) => {
+      const raw = (counts as Partial<Record<DigestType, unknown>>)[digestType];
+      return [digestType, typeof raw === "number" && Number.isFinite(raw) ? raw : 0];
+    }),
+  ) as DigestSubscriptionCounts;
 }
 
 export function DigestSubscriptionList({
@@ -80,6 +101,9 @@ export function DigestSubscriptionList({
   const [loading, setLoading] = useState(true);
   const [savingType, setSavingType] = useState<DigestType | null>(null);
   const [editingType, setEditingType] = useState<DigestType | null>(null);
+  const [subscriberCounts, setSubscriberCounts] = useState<DigestSubscriptionCounts>(
+    DEFAULT_SUBSCRIBER_COUNTS,
+  );
   const [draftTimes, setDraftTimes] = useState<Record<DigestType, string>>({
     GITHUB_TRENDING: "09:00",
     AI_NEWS: "09:20",
@@ -111,11 +135,15 @@ export function DigestSubscriptionList({
   const refresh = useCallback(async () => {
     const res = await fetch(collectionEndpoint);
     const data = await res.json();
+    const counts = parseSubscriberCounts(data);
     const items = Array.isArray(data)
       ? data
       : Array.isArray(data?.subscriptions)
         ? data.subscriptions
         : null;
+    if (counts) {
+      setSubscriberCounts(counts);
+    }
     if (items) {
       setSubscriptions(items);
       setDraftTimes((prev) => {
@@ -131,7 +159,14 @@ export function DigestSubscriptionList({
   useEffect(() => {
     if (status === "loading") return;
     if (targetType === "USER" && status === "unauthenticated") {
-      setLoading(false);
+      fetch("/api/digest-subscriptions")
+        .then((res) => res.json())
+        .then((data) => {
+          const counts = parseSubscriberCounts(data);
+          if (counts) setSubscriberCounts(counts);
+        })
+        .catch(() => undefined)
+        .finally(() => setLoading(false));
       return;
     }
     refresh()
@@ -261,6 +296,9 @@ export function DigestSubscriptionList({
                 </div>
                 <CardTitle>{option.title}</CardTitle>
                 <CardDescription>{option.description}</CardDescription>
+                <div className="text-xs text-muted-foreground">
+                  {subscriberCounts[option.type]} 个目标订阅
+                </div>
                 <CardAction>
                   {sub ? (
                     <Badge variant="secondary">已订阅</Badge>

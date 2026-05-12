@@ -70,6 +70,12 @@ List current user's active digest subscriptions:
 GET /api/digest-subscriptions/mine
 ```
 
+Fetch active subscriber counts for the digest cards:
+
+```http
+GET /api/digest-subscriptions
+```
+
 Update push times:
 
 ```http
@@ -126,7 +132,7 @@ ARXIV_RETRY_BASE_MS="15000"
 
 `GITHUB_TOKEN` is optional but recommended in production to increase GitHub API rate limits for the fallback path and README fetches. GitHub Trending items fetch each repo README and use the configured LLM (`LLM_API_KEY`, `LLM_API_BASE_URL`, `LLM_MODEL`) to generate a concise summary.
 
-Daily digest payloads are sent as Markdown overview table strings by default. Each table contains up to three rows, so `DIGEST_ITEM_LIMIT="12"` gives users twelve source items across four pages without appending the older long-form detail items. GitHub tables show the project with compact stars/today growth below it, plus a summary capped at 200 characters; AI news tables show title and a 200-character summary; arXiv tables show paper, publish date, and a 200-character summary.
+Daily digest payloads are sent as Markdown overview table strings by default. Each table contains up to three rows, so `DIGEST_ITEM_LIMIT="12"` gives users twelve source items across four pages without appending the older long-form detail items. GitHub tables show the project with compact stars/today growth below it, plus a summary capped at 200 characters; AI news tables show title and a 200-character summary; arXiv tables show paper, publish date, and a 200-character summary. Digest cards show active subscription counts per digest type.
 
 Fetch failures are also cached for a short cooldown window. `DIGEST_FETCH_FAILURE_COOLDOWN_MINUTES="180"` prevents later user push times from repeatedly calling the same failing upstream source. This is especially useful for arXiv rate limits. arXiv uses fewer retries by default (`ARXIV_FETCH_ATTEMPTS="2"`), and HTTP 429 responses are not retried immediately.
 
