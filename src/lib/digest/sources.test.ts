@@ -117,6 +117,7 @@ test("daily digest limit is capped to four pages of three rows", () => {
 });
 
 test("GitHub overview renders four table strings with stars under the project name", () => {
+  const longSummary = "这是一段用于验证摘要长度放宽到二百字的内容".repeat(6);
   const pages = formatGithubOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
       fullName: `owner/repo-${index + 1}`,
@@ -126,7 +127,9 @@ test("GitHub overview renders four table strings with stars under the project na
       totalStars: "1,234",
       forks: "99",
       starsToday: "56",
-      aiSummary: `这是第 ${index + 1} 个项目的一句话总结，说明问题、能力和适用人群。`,
+      aiSummary: index === 0
+        ? longSummary
+        : `这是第 ${index + 1} 个项目的一句话总结，说明问题、能力和适用人群。`,
     })),
   );
 
@@ -135,8 +138,9 @@ test("GitHub overview renders four table strings with stars under the project na
   assert.match(pages[0], /\| 项目 \| 一句话总结 \|/);
   assert.match(
     pages[0],
-    /\[owner\/repo-1\]\(https:\/\/github\.com\/owner\/repo-1\)<br>⭐ 1,234 \/ 今日 \+56/,
+    /\[owner\/repo-1\]\(https:\/\/github\.com\/owner\/repo-1\)<br>⭐ \[1,234 \/ \+56\]/,
   );
+  assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
     pages[0].split("\n").filter((line) => line.startsWith("| [owner/repo-")).length,
     3,
@@ -145,12 +149,13 @@ test("GitHub overview renders four table strings with stars under the project na
 });
 
 test("AI news overview omits source, category, and daily columns", () => {
+  const longSummary = "这是一段用于验证新闻摘要长度放宽到二百字的内容".repeat(6);
   const pages = formatAiNewsOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
       title: `AI news ${index + 1}`,
       url: `https://example.com/news-${index + 1}`,
       source: "AIHOT",
-      summary: `这是一条 AI 新闻摘要，保留主体、动作和影响。`,
+      summary: index === 0 ? longSummary : `这是一条 AI 新闻摘要，保留主体、动作和影响。`,
       meta: "日报: 2026-05-08 | 分类: 模型发布/更新",
     })),
   );
@@ -158,6 +163,7 @@ test("AI news overview omits source, category, and daily columns", () => {
   assert.equal(pages.length, 4);
   assert.match(pages[0], /AI 新闻总览 1\/4/);
   assert.match(pages[0], /\| 标题 \| 一句话摘要 \|/);
+  assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
     pages[0].split("\n").filter((line) => line.startsWith("| [AI news ")).length,
     3,
@@ -166,12 +172,15 @@ test("AI news overview omits source, category, and daily columns", () => {
 });
 
 test("arXiv overview renders four table strings and omits author and category columns", () => {
+  const longSummary = "这是一段用于验证论文摘要长度放宽到二百字的内容".repeat(6);
   const pages = formatArxivOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
       title: `Paper ${index + 1}`,
       url: `https://arxiv.org/abs/2605.${String(index + 1).padStart(5, "0")}`,
       authors: ["Alice", "Bob"],
-      summary: "本文提出一种新的 AI 方法，用于提升模型推理效率并降低训练成本。",
+      summary: index === 0
+        ? longSummary
+        : "本文提出一种新的 AI 方法，用于提升模型推理效率并降低训练成本。",
       published: "2026-05-08T00:00:00Z",
       primaryCategory: "cs.AI",
     })),
@@ -180,6 +189,7 @@ test("arXiv overview renders four table strings and omits author and category co
   assert.equal(pages.length, 4);
   assert.match(pages[0], /arXiv 论文总览 1\/4/);
   assert.match(pages[0], /\| 论文 \| 发布时间 \| 一句话摘要 \|/);
+  assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
     pages[0].split("\n").filter((line) => line.startsWith("| [Paper ")).length,
     3,

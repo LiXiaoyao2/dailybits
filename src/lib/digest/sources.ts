@@ -93,6 +93,7 @@ const DEFAULT_README_SUMMARY_MAX_CHARS = 5000;
 const DEFAULT_README_SUMMARY_CONCURRENCY = 2;
 const DEFAULT_DIGEST_AI_CONCURRENCY = 3;
 const DEFAULT_DIGEST_ITEM_LIMIT = 12;
+const DIGEST_OVERVIEW_SUMMARY_MAX_CHARS = 200;
 const DIGEST_OVERVIEW_PAGE_SIZE = 3;
 const DIGEST_OVERVIEW_PAGE_COUNT = 4;
 const DIGEST_OVERVIEW_ITEM_LIMIT =
@@ -172,10 +173,10 @@ function formatOverviewTables(
 
 function formatGithubStarTrend(repo: GithubRepo): string {
   const parts = [
-    repo.totalStars ? `⭐ ${repo.totalStars}` : null,
-    repo.starsToday ? `今日 +${repo.starsToday}` : null,
+    repo.totalStars || null,
+    repo.starsToday ? `+${repo.starsToday}` : null,
   ].filter(Boolean);
-  return parts.join(" / ") || "-";
+  return parts.length > 0 ? `⭐ [${parts.join(" / ")}]` : "-";
 }
 
 function formatGithubProjectCell(repo: GithubRepo): string {
@@ -204,7 +205,9 @@ export function formatGithubOverviewPages(repos: GithubRepo[]): string[] {
     ["项目", "一句话总结"],
     repos.map((repo) => [
       escapeMarkdownTableCell(formatGithubProjectCell(repo)),
-      escapeMarkdownTableCell(oneLineSummary(repo.aiSummary || repo.description, 88)),
+      escapeMarkdownTableCell(
+        oneLineSummary(repo.aiSummary || repo.description, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
+      ),
     ]),
   );
 }
@@ -215,7 +218,7 @@ export function formatAiNewsOverviewPages(items: DigestItem[]): string[] {
     ["标题", "一句话摘要"],
     items.map((item) => [
       escapeMarkdownTableCell(markdownLink(item.title, item.url)),
-      escapeMarkdownTableCell(oneLineSummary(item.summary, 96)),
+      escapeMarkdownTableCell(oneLineSummary(item.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS)),
     ]),
   );
 }
@@ -227,7 +230,7 @@ export function formatArxivOverviewPages(papers: ArxivPaper[]): string[] {
     papers.map((paper) => [
       escapeMarkdownTableCell(markdownLink(paper.title, paper.url)),
       escapeMarkdownTableCell(paper.published?.slice(0, 10)),
-      escapeMarkdownTableCell(oneLineSummary(paper.summary, 100)),
+      escapeMarkdownTableCell(oneLineSummary(paper.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS)),
     ]),
   );
 }
