@@ -195,10 +195,9 @@ export function getDigestItemLimit(): number {
 export function formatGithubOverviewPages(repos: GithubRepo[]): string[] {
   return formatOverviewTables(
     "GitHub Trending 总览",
-    ["项目", "语言", "Star 趋势", "一句话总结"],
+    ["项目", "Star 趋势", "一句话总结"],
     repos.map((repo) => [
       escapeMarkdownTableCell(markdownLink(repo.fullName, repo.url)),
-      escapeMarkdownTableCell(repo.language),
       escapeMarkdownTableCell(formatGithubStarTrend(repo)),
       escapeMarkdownTableCell(oneLineSummary(repo.aiSummary || repo.description, 88)),
     ]),
@@ -208,10 +207,9 @@ export function formatGithubOverviewPages(repos: GithubRepo[]): string[] {
 export function formatAiNewsOverviewPages(items: DigestItem[]): string[] {
   return formatOverviewTables(
     "AI 新闻总览",
-    ["标题", "来源", "一句话摘要"],
+    ["标题", "一句话摘要"],
     items.map((item) => [
       escapeMarkdownTableCell(markdownLink(item.title, item.url)),
-      escapeMarkdownTableCell(item.source),
       escapeMarkdownTableCell(oneLineSummary(item.summary, 96)),
     ]),
   );

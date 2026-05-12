@@ -116,7 +116,7 @@ test("daily digest limit is capped to three pages of four rows", () => {
   }
 });
 
-test("GitHub overview renders three table strings without fork details", () => {
+test("GitHub overview renders three table strings without language or fork details", () => {
   const pages = formatGithubOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
       fullName: `owner/repo-${index + 1}`,
@@ -132,12 +132,12 @@ test("GitHub overview renders three table strings without fork details", () => {
 
   assert.equal(pages.length, 3);
   assert.match(pages[0], /GitHub Trending 总览 1\/3/);
-  assert.match(pages[0], /Star 趋势/);
+  assert.match(pages[0], /\| 项目 \| Star 趋势 \| 一句话总结 \|/);
   assert.match(pages[0], /今日 \+56/);
-  assert.doesNotMatch(pages.join("\n"), /Fork|fork|🍴|99/);
+  assert.doesNotMatch(pages.join("\n"), /语言|TypeScript|Fork|fork|🍴|99/);
 });
 
-test("AI news overview omits category and daily columns", () => {
+test("AI news overview omits source, category, and daily columns", () => {
   const pages = formatAiNewsOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
       title: `AI news ${index + 1}`,
@@ -150,8 +150,8 @@ test("AI news overview omits category and daily columns", () => {
 
   assert.equal(pages.length, 3);
   assert.match(pages[0], /AI 新闻总览 1\/3/);
-  assert.match(pages[0], /\| 标题 \| 来源 \| 一句话摘要 \|/);
-  assert.doesNotMatch(pages.join("\n"), /分类|日报/);
+  assert.match(pages[0], /\| 标题 \| 一句话摘要 \|/);
+  assert.doesNotMatch(pages.join("\n"), /来源|AIHOT|分类|日报/);
 });
 
 test("arXiv overview omits author and category columns", () => {
