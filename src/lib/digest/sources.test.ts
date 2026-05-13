@@ -44,16 +44,17 @@ test("GitHub README summary input trims long README content before calling the L
   assert.equal(input.includes("Language: TypeScript"), true);
 });
 
-test("digest AI prompts require concise Chinese 3 to 4 sentence output", () => {
+test("digest AI prompts require concise Chinese output around 100 characters", () => {
   const instruction = getGithubReadmeSummaryInstruction();
   const newsInstruction = getAiNewsTranslationInstruction();
   const arxivInstruction = getArxivAbstractSummaryInstruction();
 
   assert.match(instruction, /中文|简体中文/);
-  assert.match(instruction, /3\s*到\s*4\s*句/);
+  assert.match(instruction, /100\s*字左右/);
   assert.match(instruction, /不要输出 Markdown/);
-  assert.match(newsInstruction, /3\s*到\s*4\s*句/);
-  assert.match(arxivInstruction, /3\s*到\s*4\s*句/);
+  assert.match(newsInstruction, /100\s*字左右/);
+  assert.match(arxivInstruction, /100\s*字左右/);
+  assert.doesNotMatch(`${instruction}\n${newsInstruction}\n${arxivInstruction}`, /3\s*到\s*4\s*句/);
 });
 
 test("AIHOT daily cache date waits until the daily report is ready", () => {

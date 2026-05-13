@@ -258,18 +258,18 @@ export function buildGithubReadmeSummaryText(
 
 export function getGithubReadmeSummaryInstruction(): string {
   return [
-    "请基于这个 GitHub 项目的 README，用简体中文写 3 到 4 句总结。",
+    "请基于这个 GitHub 项目的 README，用简体中文写 100 字左右的总结。",
     "必须说明：它解决什么问题、核心能力是什么、适合谁关注或使用。",
     "不要逐字翻译 README，不要添加原文没有的信息，不要输出英文摘要，不要输出 Markdown，不要输出标题。",
   ].join("\n");
 }
 
 export function getAiNewsTranslationInstruction(): string {
-  return "请把下面的 AI 新闻摘要翻译并轻度改写成简体中文 3 到 4 句，保留关键主体、动作和影响。";
+  return "请把下面的 AI 新闻摘要翻译并轻度改写成简体中文 100 字左右的摘要，保留关键主体、动作和影响。";
 }
 
 export function getArxivAbstractSummaryInstruction(): string {
-  return "请基于下面的论文 Abstract，用简体中文写 3 到 4 句摘要，保留研究问题、方法和主要贡献；论文标题不用翻译。";
+  return "请基于下面的论文 Abstract，用简体中文写 100 字左右的摘要，保留研究问题、方法和主要贡献；论文标题不用翻译。";
 }
 
 function getAihotApiBaseUrl(): string {
