@@ -5,6 +5,7 @@ import {
   formatAiNewsOverviewPages,
   formatArxivOverviewPages,
   formatGithubOverviewPages,
+  fetchAiNewsDigest,
   getAiNewsDigestCacheDate,
   getAiNewsTranslationInstruction,
   getArxivAbstractSummaryInstruction,
@@ -44,17 +45,130 @@ test("GitHub README summary input trims long README content before calling the L
   assert.equal(input.includes("Language: TypeScript"), true);
 });
 
-test("digest AI prompts require concise Chinese output around 100 characters", () => {
+test("digest AI prompts require concise Chinese output between 80 and 120 characters", () => {
   const instruction = getGithubReadmeSummaryInstruction();
   const newsInstruction = getAiNewsTranslationInstruction();
   const arxivInstruction = getArxivAbstractSummaryInstruction();
 
   assert.match(instruction, /中文|简体中文/);
-  assert.match(instruction, /100\s*字左右/);
+  assert.match(instruction, /80\s*到\s*120\s*字/);
+  assert.match(instruction, /最多不超过\s*120\s*字/);
   assert.match(instruction, /不要输出 Markdown/);
-  assert.match(newsInstruction, /100\s*字左右/);
-  assert.match(arxivInstruction, /100\s*字左右/);
+  assert.match(newsInstruction, /80\s*到\s*120\s*字/);
+  assert.match(newsInstruction, /最多不超过\s*120\s*字/);
+  assert.match(arxivInstruction, /80\s*到\s*120\s*字/);
+  assert.match(arxivInstruction, /最多不超过\s*120\s*字/);
   assert.doesNotMatch(`${instruction}\n${newsInstruction}\n${arxivInstruction}`, /3\s*到\s*4\s*句/);
+});
+
+test("AIHOT news items are rewritten by the digest LLM before rendering", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalProvider = process.env.AI_NEWS_PROVIDER;
+  const originalMode = process.env.AIHOT_DIGEST_MODE;
+  const originalAihotBaseUrl = process.env.AIHOT_API_BASE_URL;
+  const originalLlmApiKey = process.env.LLM_API_KEY;
+  const originalLlmBaseUrl = process.env.LLM_API_BASE_URL;
+  const originalLlmModel = process.env.LLM_MODEL;
+  let llmCalls = 0;
+  let llmRequestBody = "";
+
+  process.env.AI_NEWS_PROVIDER = "aihot";
+  process.env.AIHOT_DIGEST_MODE = "daily";
+  process.env.AIHOT_API_BASE_URL = "https://aihot.test";
+  process.env.LLM_API_KEY = "test-key";
+  process.env.LLM_API_BASE_URL = "https://llm.test/compatible-mode/v1";
+  process.env.LLM_MODEL = "qwen-plus";
+
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url === "https://aihot.test/api/public/daily/2026-05-12") {
+      return new Response(
+        JSON.stringify({
+          date: "2026-05-12",
+          sections: [
+            {
+              label: "模型发布",
+              items: [
+                {
+                  title: "AIHOT 测试标题",
+                  summary: "AIHOT原始摘要，长度和风格不稳定，需要统一改写后再进入推送表格。",
+                  sourceUrl: "https://example.com/aihot",
+                  sourceName: "AIHOT",
+                },
+              ],
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (url === "https://llm.test/compatible-mode/v1/chat/completions") {
+      llmCalls += 1;
+      llmRequestBody = String(init?.body ?? "");
+      return new Response(
+        JSON.stringify({
+          id: "chatcmpl-test",
+          object: "chat.completion",
+          created: 0,
+          model: "qwen-plus",
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant",
+                content:
+                  "LLM统一摘要会保留标题里的核心主体，并把原始摘要压缩成稳定长度，说明事件动作、影响和适合关注的人群。",
+              },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const pages = await fetchAiNewsDigest(1, { digestDate: "2026-05-12" });
+    assert.equal(llmCalls, 1);
+    assert.match(pages[0], /LLM统一摘要/);
+    assert.doesNotMatch(pages[0], /AIHOT原始摘要/);
+    assert.match(llmRequestBody, /AIHOT 测试标题/);
+    assert.match(llmRequestBody, /AIHOT原始摘要/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalProvider === undefined) {
+      delete process.env.AI_NEWS_PROVIDER;
+    } else {
+      process.env.AI_NEWS_PROVIDER = originalProvider;
+    }
+    if (originalMode === undefined) {
+      delete process.env.AIHOT_DIGEST_MODE;
+    } else {
+      process.env.AIHOT_DIGEST_MODE = originalMode;
+    }
+    if (originalAihotBaseUrl === undefined) {
+      delete process.env.AIHOT_API_BASE_URL;
+    } else {
+      process.env.AIHOT_API_BASE_URL = originalAihotBaseUrl;
+    }
+    if (originalLlmApiKey === undefined) {
+      delete process.env.LLM_API_KEY;
+    } else {
+      process.env.LLM_API_KEY = originalLlmApiKey;
+    }
+    if (originalLlmBaseUrl === undefined) {
+      delete process.env.LLM_API_BASE_URL;
+    } else {
+      process.env.LLM_API_BASE_URL = originalLlmBaseUrl;
+    }
+    if (originalLlmModel === undefined) {
+      delete process.env.LLM_MODEL;
+    } else {
+      process.env.LLM_MODEL = originalLlmModel;
+    }
+  }
 });
 
 test("AIHOT daily cache date waits until the daily report is ready", () => {
