@@ -4,6 +4,7 @@ import {
   buildDigestFetchFailureCache,
   buildDigestPushLogKey,
   getDigestFetchFailureCooldownMs,
+  getDigestItemsForDate,
   isActiveDigestFetchFailureCache,
 } from "./delivery";
 
@@ -62,4 +63,32 @@ test("digest fetch failure cooldown defaults to three hours", () => {
       process.env.DIGEST_FETCH_FAILURE_COOLDOWN_MINUTES = original;
     }
   }
+});
+
+test("digest cache accepts list-formatted markdown pages", async () => {
+  const cachedItems = [
+    [
+      "### AI 新闻总览 1/1",
+      "",
+      "**1. [AI news](https://example.com/news)**",
+      "",
+      "这是一条列表格式的摘要。",
+    ].join("\n"),
+  ];
+  const prisma = {
+    digestCache: {
+      findUnique: async () => ({ items: cachedItems }),
+      upsert: async () => {
+        throw new Error("cached list pages should not refetch");
+      },
+    },
+  };
+
+  const items = await getDigestItemsForDate(
+    prisma as never,
+    "AI_NEWS",
+    "2026-05-14",
+  );
+
+  assert.deepEqual(items, cachedItems);
 });

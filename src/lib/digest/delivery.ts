@@ -131,7 +131,9 @@ function parseCachedItems(items: unknown): string[] | null {
   return normalized.length > 0 &&
     normalized.every((item) => {
       const value = item.trim();
-      return value.startsWith("### ") && value.includes("\n| ") && value.includes("\n| ---");
+      const isTablePage = value.includes("\n| ") && value.includes("\n| ---");
+      const isListPage = /\n\*\*\d+\. .+\*\*/.test(value);
+      return value.startsWith("### ") && (isTablePage || isListPage);
     })
     ? normalized
     : null;

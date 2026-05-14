@@ -133,10 +133,6 @@ function markdownLink(label: string, url?: string): string {
   return url ? `[${label}](${url})` : label;
 }
 
-function escapeMarkdownTableCell(value: string | undefined): string {
-  return compactWhitespace(value || "-").replace(/\|/g, "\\|");
-}
-
 function truncate(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength - 3).trim()}...`;
@@ -157,18 +153,27 @@ function splitIntoOverviewPages<T>(items: T[]): T[][] {
   return pages;
 }
 
-function formatOverviewTables(
+function formatOverviewListPages(
   title: string,
-  headers: string[],
-  rows: string[][],
+  rows: Array<{ itemTitle: string; meta?: string; summary: string }>,
 ): string[] {
   const pages = splitIntoOverviewPages(rows);
-  return pages.map((pageRows, index) => [
-    `### ${title} ${index + 1}/${pages.length}`,
-    `| ${headers.join(" | ")} |`,
-    `| ${headers.map(() => "---").join(" | ")} |`,
-    ...pageRows.map((row) => `| ${row.join(" | ")} |`),
-  ].join("\n"));
+  return pages.map((pageRows, pageIndex) => {
+    const offset = pageIndex * DIGEST_OVERVIEW_PAGE_SIZE;
+    return [
+      `### ${title} ${pageIndex + 1}/${pages.length}`,
+      "",
+      ...pageRows.flatMap((row, rowIndex) => [
+        [
+          `**${offset + rowIndex + 1}. ${row.itemTitle}**`,
+          row.meta,
+        ].filter(Boolean).join("  "),
+        "",
+        row.summary,
+        "",
+      ]),
+    ].join("\n").trim();
+  });
 }
 
 function formatGithubStarTrend(repo: GithubRepo): string {
@@ -177,12 +182,6 @@ function formatGithubStarTrend(repo: GithubRepo): string {
     repo.starsToday ? `+${repo.starsToday}` : null,
   ].filter(Boolean);
   return parts.length > 0 ? `⭐ [${parts.join(" / ")}]` : "-";
-}
-
-function formatGithubProjectCell(repo: GithubRepo): string {
-  const project = markdownLink(repo.fullName, repo.url);
-  const starTrend = formatGithubStarTrend(repo);
-  return starTrend === "-" ? project : `${project}<br>${starTrend}`;
 }
 
 function clampDigestItemLimit(value: number): number {
@@ -200,38 +199,40 @@ export function getDigestItemLimit(): number {
 }
 
 export function formatGithubOverviewPages(repos: GithubRepo[]): string[] {
-  return formatOverviewTables(
+  return formatOverviewListPages(
     "GitHub Trending 总览",
-    ["项目", "一句话总结"],
-    repos.map((repo) => [
-      escapeMarkdownTableCell(formatGithubProjectCell(repo)),
-      escapeMarkdownTableCell(
-        oneLineSummary(repo.aiSummary || repo.description, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
-      ),
-    ]),
+    repos.map((repo) => {
+      const starTrend = formatGithubStarTrend(repo);
+      return {
+        itemTitle: markdownLink(repo.fullName, repo.url),
+        meta: starTrend === "-" ? undefined : starTrend,
+        summary: oneLineSummary(repo.aiSummary || repo.description, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
+      };
+    }),
   );
 }
 
 export function formatAiNewsOverviewPages(items: DigestItem[]): string[] {
-  return formatOverviewTables(
+  return formatOverviewListPages(
     "AI 新闻总览",
-    ["标题", "一句话摘要"],
-    items.map((item) => [
-      escapeMarkdownTableCell(markdownLink(item.title, item.url)),
-      escapeMarkdownTableCell(oneLineSummary(item.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS)),
-    ]),
+    items.map((item) => ({
+      itemTitle: markdownLink(item.title, item.url),
+      summary: oneLineSummary(item.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
+    })),
   );
 }
 
 export function formatArxivOverviewPages(papers: ArxivPaper[]): string[] {
-  return formatOverviewTables(
+  return formatOverviewListPages(
     "arXiv 论文总览",
-    ["论文", "发布时间", "一句话摘要"],
-    papers.map((paper) => [
-      escapeMarkdownTableCell(markdownLink(paper.title, paper.url)),
-      escapeMarkdownTableCell(paper.published?.slice(0, 10)),
-      escapeMarkdownTableCell(oneLineSummary(paper.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS)),
-    ]),
+    papers.map((paper) => {
+      const published = paper.published?.slice(0, 10);
+      return {
+        itemTitle: markdownLink(paper.title, paper.url),
+        meta: published ? `\`${published}\`` : undefined,
+        summary: oneLineSummary(paper.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
+      };
+    }),
   );
 }
 

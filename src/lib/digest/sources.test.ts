@@ -237,7 +237,7 @@ test("daily digest limit is capped to four pages of three rows", () => {
   }
 });
 
-test("GitHub overview renders four table strings with stars under the project name", () => {
+test("GitHub overview renders four list pages with stars inline with the title", () => {
   const longSummary = "这是一段用于验证摘要长度放宽到二百字的内容".repeat(6);
   const pages = formatGithubOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
@@ -256,20 +256,19 @@ test("GitHub overview renders four table strings with stars under the project na
 
   assert.equal(pages.length, 4);
   assert.match(pages[0], /GitHub Trending 总览 1\/4/);
-  assert.match(pages[0], /\| 项目 \| 一句话总结 \|/);
   assert.match(
     pages[0],
-    /\[owner\/repo-1\]\(https:\/\/github\.com\/owner\/repo-1\)<br>⭐ \[1,234 \/ \+56\]/,
+    /\*\*1\. \[owner\/repo-1\]\(https:\/\/github\.com\/owner\/repo-1\)\*\*  ⭐ \[1,234 \/ \+56\]/,
   );
   assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
-    pages[0].split("\n").filter((line) => line.startsWith("| [owner/repo-")).length,
+    pages[0].split("\n").filter((line) => /^\*\*\d+\. \[owner\/repo-/.test(line)).length,
     3,
   );
-  assert.doesNotMatch(pages.join("\n"), /语言|TypeScript|Star 趋势|Fork|fork|🍴|99/);
+  assert.doesNotMatch(pages.join("\n"), /\| 项目 \| 一句话总结 \||<br>|语言|TypeScript|Star 趋势|Fork|fork|🍴|99/);
 });
 
-test("AI news overview omits source, category, and daily columns", () => {
+test("AI news overview renders four list pages without source, category, and daily columns", () => {
   const longSummary = "这是一段用于验证新闻摘要长度放宽到二百字的内容".repeat(6);
   const pages = formatAiNewsOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
@@ -283,16 +282,16 @@ test("AI news overview omits source, category, and daily columns", () => {
 
   assert.equal(pages.length, 4);
   assert.match(pages[0], /AI 新闻总览 1\/4/);
-  assert.match(pages[0], /\| 标题 \| 一句话摘要 \|/);
+  assert.match(pages[0], /\*\*1\. \[AI news 1\]\(https:\/\/example\.com\/news-1\)\*\*/);
   assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
-    pages[0].split("\n").filter((line) => line.startsWith("| [AI news ")).length,
+    pages[0].split("\n").filter((line) => /^\*\*\d+\. \[AI news /.test(line)).length,
     3,
   );
-  assert.doesNotMatch(pages.join("\n"), /来源|AIHOT|分类|日报/);
+  assert.doesNotMatch(pages.join("\n"), /\| 标题 \| 一句话摘要 \||来源|AIHOT|分类|日报/);
 });
 
-test("arXiv overview renders four table strings and omits author and category columns", () => {
+test("arXiv overview renders four list pages with published date inline", () => {
   const longSummary = "这是一段用于验证论文摘要长度放宽到二百字的内容".repeat(6);
   const pages = formatArxivOverviewPages(
     Array.from({ length: 12 }, (_, index) => ({
@@ -309,11 +308,14 @@ test("arXiv overview renders four table strings and omits author and category co
 
   assert.equal(pages.length, 4);
   assert.match(pages[0], /arXiv 论文总览 1\/4/);
-  assert.match(pages[0], /\| 论文 \| 发布时间 \| 一句话摘要 \|/);
+  assert.match(
+    pages[0],
+    /\*\*1\. \[Paper 1\]\(https:\/\/arxiv\.org\/abs\/2605\.00001\)\*\*  `2026-05-08`/,
+  );
   assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
-    pages[0].split("\n").filter((line) => line.startsWith("| [Paper ")).length,
+    pages[0].split("\n").filter((line) => /^\*\*\d+\. \[Paper /.test(line)).length,
     3,
   );
-  assert.doesNotMatch(pages.join("\n"), /作者|分类|Alice|Bob|cs\.AI/);
+  assert.doesNotMatch(pages.join("\n"), /\| 论文 \| 发布时间 \| 一句话摘要 \||作者|分类|Alice|Bob|cs\.AI/);
 });
