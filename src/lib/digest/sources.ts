@@ -157,20 +157,17 @@ function formatOverviewListPages(
   rows: Array<{ itemTitle: string; meta?: string; summary: string }>,
 ): string[] {
   const pages = splitIntoOverviewPages(rows);
-  return pages.map((pageRows, pageIndex) => {
-    const offset = pageIndex * DIGEST_OVERVIEW_PAGE_SIZE;
-    return [
-      ...pageRows.flatMap((row, rowIndex) => [
-        [
-          `**${offset + rowIndex + 1}. ${row.itemTitle}**`,
-          row.meta,
-        ].filter(Boolean).join("  "),
-        "",
-        row.summary,
-        "",
-      ]),
-    ].join("\n").trim();
-  });
+  return pages.map((pageRows) => [
+    ...pageRows.flatMap((row) => [
+      [
+        `**${row.itemTitle}**`,
+        row.meta,
+      ].filter(Boolean).join("  "),
+      "",
+      row.summary,
+      "",
+    ]),
+  ].join("\n").trim());
 }
 
 function formatGithubStarTrend(repo: GithubRepo): string {

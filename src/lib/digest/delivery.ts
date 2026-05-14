@@ -132,7 +132,9 @@ function parseCachedItems(items: unknown): string[] | null {
     normalized.every((item) => {
       const value = item.trim();
       const isTablePage = value.includes("\n| ") && value.includes("\n| ---");
-      const isListPage = /(^|\n)\*\*\d+\. .+\*\*/.test(value);
+      const isNumberedListPage = /(^|\n)\*\*\d+\. .+\*\*/.test(value);
+      const isPlainListPage = /(^|\n)\*\*\[[^\]]+\]\([^)]+\)\*\*/.test(value);
+      const isListPage = isNumberedListPage || isPlainListPage;
       return value.startsWith("### ") ? isTablePage || isListPage : isListPage;
     })
     ? normalized
