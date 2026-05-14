@@ -255,17 +255,20 @@ test("GitHub overview renders four list pages with stars inline with the title",
   );
 
   assert.equal(pages.length, 4);
-  assert.match(pages[0], /GitHub Trending 总览 1\/4/);
   assert.match(
     pages[0],
     /\*\*1\. \[owner\/repo-1\]\(https:\/\/github\.com\/owner\/repo-1\)\*\*  ⭐ \[1,234 \/ \+56\]/,
+  );
+  assert.match(
+    pages[1],
+    /^\*\*4\. \[owner\/repo-4\]\(https:\/\/github\.com\/owner\/repo-4\)\*\*  ⭐ \[1,234 \/ \+56\]/,
   );
   assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
     pages[0].split("\n").filter((line) => /^\*\*\d+\. \[owner\/repo-/.test(line)).length,
     3,
   );
-  assert.doesNotMatch(pages.join("\n"), /\| 项目 \| 一句话总结 \||<br>|语言|TypeScript|Star 趋势|Fork|fork|🍴|99/);
+  assert.doesNotMatch(pages.join("\n"), /总览 \d+\/\d+|\| 项目 \| 一句话总结 \||<br>|语言|TypeScript|Star 趋势|Fork|fork|🍴|99/);
 });
 
 test("AI news overview renders four list pages without source, category, and daily columns", () => {
@@ -281,14 +284,15 @@ test("AI news overview renders four list pages without source, category, and dai
   );
 
   assert.equal(pages.length, 4);
-  assert.match(pages[0], /AI 新闻总览 1\/4/);
+  assert.match(pages[0], /^\*\*1\. \[AI news 1\]\(https:\/\/example\.com\/news-1\)\*\*/);
+  assert.match(pages[1], /^\*\*4\. \[AI news 4\]\(https:\/\/example\.com\/news-4\)\*\*/);
   assert.match(pages[0], /\*\*1\. \[AI news 1\]\(https:\/\/example\.com\/news-1\)\*\*/);
   assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
     pages[0].split("\n").filter((line) => /^\*\*\d+\. \[AI news /.test(line)).length,
     3,
   );
-  assert.doesNotMatch(pages.join("\n"), /\| 标题 \| 一句话摘要 \||来源|AIHOT|分类|日报/);
+  assert.doesNotMatch(pages.join("\n"), /总览 \d+\/\d+|\| 标题 \| 一句话摘要 \||来源|AIHOT|分类|日报/);
 });
 
 test("arXiv overview renders four list pages with published date inline", () => {
@@ -307,15 +311,18 @@ test("arXiv overview renders four list pages with published date inline", () => 
   );
 
   assert.equal(pages.length, 4);
-  assert.match(pages[0], /arXiv 论文总览 1\/4/);
   assert.match(
     pages[0],
     /\*\*1\. \[Paper 1\]\(https:\/\/arxiv\.org\/abs\/2605\.00001\)\*\*  `2026-05-08`/,
+  );
+  assert.match(
+    pages[1],
+    /^\*\*4\. \[Paper 4\]\(https:\/\/arxiv\.org\/abs\/2605\.00004\)\*\*  `2026-05-08`/,
   );
   assert.match(pages[0], new RegExp(longSummary));
   assert.equal(
     pages[0].split("\n").filter((line) => /^\*\*\d+\. \[Paper /.test(line)).length,
     3,
   );
-  assert.doesNotMatch(pages.join("\n"), /\| 论文 \| 发布时间 \| 一句话摘要 \||作者|分类|Alice|Bob|cs\.AI/);
+  assert.doesNotMatch(pages.join("\n"), /总览 \d+\/\d+|\| 论文 \| 发布时间 \| 一句话摘要 \||作者|分类|Alice|Bob|cs\.AI/);
 });

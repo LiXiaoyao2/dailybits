@@ -154,15 +154,12 @@ function splitIntoOverviewPages<T>(items: T[]): T[][] {
 }
 
 function formatOverviewListPages(
-  title: string,
   rows: Array<{ itemTitle: string; meta?: string; summary: string }>,
 ): string[] {
   const pages = splitIntoOverviewPages(rows);
   return pages.map((pageRows, pageIndex) => {
     const offset = pageIndex * DIGEST_OVERVIEW_PAGE_SIZE;
     return [
-      `### ${title} ${pageIndex + 1}/${pages.length}`,
-      "",
       ...pageRows.flatMap((row, rowIndex) => [
         [
           `**${offset + rowIndex + 1}. ${row.itemTitle}**`,
@@ -200,7 +197,6 @@ export function getDigestItemLimit(): number {
 
 export function formatGithubOverviewPages(repos: GithubRepo[]): string[] {
   return formatOverviewListPages(
-    "GitHub Trending 总览",
     repos.map((repo) => {
       const starTrend = formatGithubStarTrend(repo);
       return {
@@ -214,7 +210,6 @@ export function formatGithubOverviewPages(repos: GithubRepo[]): string[] {
 
 export function formatAiNewsOverviewPages(items: DigestItem[]): string[] {
   return formatOverviewListPages(
-    "AI 新闻总览",
     items.map((item) => ({
       itemTitle: markdownLink(item.title, item.url),
       summary: oneLineSummary(item.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
@@ -224,7 +219,6 @@ export function formatAiNewsOverviewPages(items: DigestItem[]): string[] {
 
 export function formatArxivOverviewPages(papers: ArxivPaper[]): string[] {
   return formatOverviewListPages(
-    "arXiv 论文总览",
     papers.map((paper) => {
       const published = paper.published?.slice(0, 10);
       return {

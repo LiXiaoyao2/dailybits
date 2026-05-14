@@ -68,8 +68,6 @@ test("digest fetch failure cooldown defaults to three hours", () => {
 test("digest cache accepts list-formatted markdown pages", async () => {
   const cachedItems = [
     [
-      "### AI 新闻总览 1/1",
-      "",
       "**1. [AI news](https://example.com/news)**",
       "",
       "这是一条列表格式的摘要。",
