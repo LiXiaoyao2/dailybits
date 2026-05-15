@@ -32,10 +32,12 @@ export function KnowledgeExplorer({
   targetType = "USER",
   targetId,
   showCreate = true,
+  onSubscribed,
 }: {
   targetType?: "USER" | "GROUP";
   targetId?: string;
   showCreate?: boolean;
+  onSubscribed?: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -123,6 +125,7 @@ export function KnowledgeExplorer({
                   appearDelayMs={index * 70}
                   targetType={targetType}
                   targetId={targetId}
+                  onSubscribed={onSubscribed}
                 />
               </div>
             ))}

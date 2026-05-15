@@ -26,11 +26,12 @@ import {
 } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { SkeletonCardGrid } from "@/components/ui/skeleton-card";
-import { Search, Clock, BookOpen, Users, CheckCircle, Bell } from "lucide-react";
+import { Search, Clock, BookOpen, Users, CheckCircle, Bell, BookMarked } from "lucide-react";
 import { DigestSubscriptionList } from "@/components/dashboard/digest-subscription-list";
 import { KnowledgeExplorer } from "@/components/knowledge/knowledge-explorer";
 import {
   MAX_SUBSCRIPTIONS_PER_TARGET,
+  MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET,
   MAX_PUSH_TIMES_PER_SUBSCRIPTION,
   DEFAULT_PUSH_TIMES,
 } from "@/types";
@@ -60,6 +61,29 @@ interface GroupSubscriptionsResponse {
   limit: number;
 }
 
+interface KnowledgeSubscriptionItem {
+  id: string;
+  bankId: string;
+  pushTimes: string[];
+  isActive: boolean;
+  subscriber?: { id: string; name: string | null; uid: string | null } | null;
+  bank: {
+    id: string;
+    title: string;
+    description: string | null;
+    subscriberCount: number;
+    _count: { points: number };
+  };
+  pointCount: number;
+  pushedCount: number;
+}
+
+interface GroupKnowledgeSubscriptionsResponse {
+  subscriptions: KnowledgeSubscriptionItem[];
+  count: number;
+  limit: number;
+}
+
 interface Bank {
   id: string;
   title: string;
@@ -83,6 +107,9 @@ interface BanksResponse {
 export function GroupDashboard({ groupId }: { groupId: string }) {
   const [subData, setSubData] = useState<GroupSubscriptionsResponse | null>(null);
   const [subLoading, setSubLoading] = useState(true);
+  const [knowledgeSubData, setKnowledgeSubData] =
+    useState<GroupKnowledgeSubscriptionsResponse | null>(null);
+  const [knowledgeSubLoading, setKnowledgeSubLoading] = useState(true);
 
   const [banksData, setBanksData] = useState<BanksResponse | null>(null);
   const [banksLoading, setBanksLoading] = useState(true);
@@ -108,6 +135,35 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
         setSubData({ subscriptions: [], count: 0, limit: MAX_SUBSCRIPTIONS_PER_TARGET });
       })
       .finally(() => setSubLoading(false));
+  }, [groupId]);
+
+  const fetchKnowledgeSubscriptions = useCallback(() => {
+    setKnowledgeSubLoading(true);
+    const params = new URLSearchParams();
+    params.set("targetType", "GROUP");
+    params.set("targetId", groupId);
+    fetch(`/api/knowledge-subscriptions?${params}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json && Array.isArray(json.subscriptions)) {
+          setKnowledgeSubData(json as GroupKnowledgeSubscriptionsResponse);
+        } else {
+          setKnowledgeSubData({
+            subscriptions: [],
+            count: 0,
+            limit: MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET,
+          });
+        }
+      })
+      .catch(() => {
+        toast.error("获取知识卡片订阅失败");
+        setKnowledgeSubData({
+          subscriptions: [],
+          count: 0,
+          limit: MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET,
+        });
+      })
+      .finally(() => setKnowledgeSubLoading(false));
   }, [groupId]);
 
   /* --- banks --- */
@@ -147,12 +203,18 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
   }, [fetchSubscriptions]);
 
   useEffect(() => {
+    const timeout = setTimeout(fetchKnowledgeSubscriptions, 0);
+    return () => clearTimeout(timeout);
+  }, [fetchKnowledgeSubscriptions]);
+
+  useEffect(() => {
     const timeout = setTimeout(fetchBanks, 0);
     return () => clearTimeout(timeout);
   }, [fetchBanks]);
 
   const refreshAll = () => {
     fetchSubscriptions();
+    fetchKnowledgeSubscriptions();
     fetchBanks();
   };
 
@@ -175,8 +237,29 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
     }
   };
 
+  const handleUnsubscribeKnowledge = async (subId: string) => {
+    if (!confirm("确定要取消该知识卡片订阅吗？")) return;
+    try {
+      const res = await fetch(`/api/knowledge-subscriptions/${subId}`, {
+        method: "DELETE",
+        headers: { "x-group-id": groupId },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "取消订阅失败");
+        return;
+      }
+      toast.success("已取消订阅");
+      refreshAll();
+    } catch {
+      toast.error("取消订阅失败");
+    }
+  };
+
   const atLimit = (subData?.count ?? 0) >= MAX_SUBSCRIPTIONS_PER_TARGET;
   const subCount = subData?.count ?? 0;
+  const knowledgeSubCount = knowledgeSubData?.count ?? 0;
+  const managementCount = subCount + knowledgeSubCount;
 
   return (
     <div className="space-y-5">
@@ -184,9 +267,15 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-sm shadow-sm">
           <BookOpen className="size-3.5 text-primary/70" />
-          <span className="text-muted-foreground">已订阅</span>
+          <span className="text-muted-foreground">题库</span>
           <span className="font-semibold">{subCount}</span>
           <span className="text-muted-foreground">/ {MAX_SUBSCRIPTIONS_PER_TARGET}</span>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-sm shadow-sm">
+          <BookMarked className="size-3.5 text-primary/70" />
+          <span className="text-muted-foreground">知识卡片</span>
+          <span className="font-semibold">{knowledgeSubCount}</span>
+          <span className="text-muted-foreground">/ {MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET}</span>
         </div>
         {banksData && (
           <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-sm shadow-sm">
@@ -209,10 +298,10 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
           </TabsTrigger>
           <TabsTrigger value="subscriptions" className="h-8 min-w-0 gap-1.5 px-2">
             <CheckCircle className="size-3.5" />
-            题库订阅
-            {subCount > 0 && (
+            订阅管理
+            {managementCount > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5 text-[10px] font-semibold">
-                {subCount}
+                {managementCount}
               </Badge>
             )}
           </TabsTrigger>
@@ -241,13 +330,16 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
           />
         </TabsContent>
 
-        {/* ---------- tab: 已订阅 ---------- */}
+        {/* ---------- tab: 订阅管理 ---------- */}
         <TabsContent value="subscriptions" className="pt-4">
-          <SubscriptionsTab
+          <SubscriptionManagementTab
             subData={subData}
             subLoading={subLoading}
+            knowledgeSubData={knowledgeSubData}
+            knowledgeSubLoading={knowledgeSubLoading}
             groupId={groupId}
             onUnsubscribe={handleUnsubscribe}
+            onUnsubscribeKnowledge={handleUnsubscribeKnowledge}
             onUpdate={refreshAll}
           />
         </TabsContent>
@@ -266,6 +358,7 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
             targetType="GROUP"
             targetId={groupId}
             showCreate={false}
+            onSubscribed={refreshAll}
           />
         </TabsContent>
       </Tabs>
@@ -599,9 +692,66 @@ function GroupBankCard({
   );
 }
 
-/* ========== Tab 2: 已订阅 ========== */
+/* ========== Tab 2: 订阅管理 ========== */
 
-function SubscriptionsTab({
+function SubscriptionManagementTab({
+  subData,
+  subLoading,
+  knowledgeSubData,
+  knowledgeSubLoading,
+  groupId,
+  onUnsubscribe,
+  onUnsubscribeKnowledge,
+  onUpdate,
+}: {
+  subData: GroupSubscriptionsResponse | null;
+  subLoading: boolean;
+  knowledgeSubData: GroupKnowledgeSubscriptionsResponse | null;
+  knowledgeSubLoading: boolean;
+  groupId: string;
+  onUnsubscribe: (id: string) => void;
+  onUnsubscribeKnowledge: (id: string) => void;
+  onUpdate: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-serif text-lg font-semibold">题库</h3>
+          <Badge variant="outline">
+            {subData?.count ?? 0} / {subData?.limit ?? MAX_SUBSCRIPTIONS_PER_TARGET}
+          </Badge>
+        </div>
+        <QuestionSubscriptionsSection
+          subData={subData}
+          subLoading={subLoading}
+          groupId={groupId}
+          onUnsubscribe={onUnsubscribe}
+          onUpdate={onUpdate}
+        />
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-serif text-lg font-semibold">知识卡片</h3>
+          <Badge variant="outline">
+            {knowledgeSubData?.count ?? 0} /{" "}
+            {knowledgeSubData?.limit ?? MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET}
+          </Badge>
+        </div>
+        <KnowledgeSubscriptionsTab
+          knowledgeSubData={knowledgeSubData}
+          knowledgeSubLoading={knowledgeSubLoading}
+          groupId={groupId}
+          onUnsubscribe={onUnsubscribeKnowledge}
+          onUpdate={onUpdate}
+        />
+      </section>
+    </div>
+  );
+}
+
+function QuestionSubscriptionsSection({
   subData,
   subLoading,
   groupId,
@@ -816,6 +966,240 @@ function GroupSubscriptionCard({
                       onClick={() => removeTime(t)}
                     >
                       {t} ×
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditOpen(false)}
+                  disabled={saving}
+                >
+                  取消
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  保存
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onUnsubscribe}
+          >
+            取消订阅
+          </Button>
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function KnowledgeSubscriptionsTab({
+  knowledgeSubData,
+  knowledgeSubLoading,
+  groupId,
+  onUnsubscribe,
+  onUpdate,
+}: {
+  knowledgeSubData: GroupKnowledgeSubscriptionsResponse | null;
+  knowledgeSubLoading: boolean;
+  groupId: string;
+  onUnsubscribe: (id: string) => void;
+  onUpdate: () => void;
+}) {
+  if (knowledgeSubLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="pt-6">
+              <div className="h-5 w-48 rounded bg-muted" />
+              <div className="mt-2 h-4 w-full rounded bg-muted" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!knowledgeSubData?.subscriptions.length) {
+    return (
+      <EmptyState
+        title="暂无知识卡片订阅"
+        description="前往「知识卡片」浏览并订阅知识库"
+        illustration="book"
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {knowledgeSubData.subscriptions.map((sub, index) => (
+        <GroupKnowledgeSubscriptionCard
+          key={sub.id}
+          sub={sub}
+          groupId={groupId}
+          index={index}
+          onUnsubscribe={() => onUnsubscribe(sub.id)}
+          onUpdate={onUpdate}
+        />
+      ))}
+    </div>
+  );
+}
+
+function GroupKnowledgeSubscriptionCard({
+  sub,
+  groupId,
+  index,
+  onUnsubscribe,
+  onUpdate,
+}: {
+  sub: KnowledgeSubscriptionItem;
+  groupId: string;
+  index: number;
+  onUnsubscribe: () => void;
+  onUpdate: () => void;
+}) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [pushTimes, setPushTimes] = useState<string[]>(sub.pushTimes);
+  const [newTime, setNewTime] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const atTimeLimit = pushTimes.length >= MAX_PUSH_TIMES_PER_SUBSCRIPTION;
+
+  const addTime = () => {
+    const val = newTime.trim();
+    if (!val || !/^\d{2}:\d{2}$/.test(val)) {
+      toast.error("请输入有效的 HH:MM 格式时间");
+      return;
+    }
+    if (pushTimes.includes(val)) {
+      toast.error("该时间已存在");
+      return;
+    }
+    if (atTimeLimit) {
+      toast.error(`推送时间不能超过 ${MAX_PUSH_TIMES_PER_SUBSCRIPTION} 个`);
+      return;
+    }
+    setPushTimes((prev) => [...prev, val].sort());
+    setNewTime("");
+  };
+
+  const removeTime = (time: string) => {
+    setPushTimes((prev) => prev.filter((item) => item !== time));
+  };
+
+  const handleSave = async () => {
+    if (pushTimes.length === 0) {
+      toast.error("请至少保留一个推送时间");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/knowledge-subscriptions/${sub.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-group-id": groupId,
+        },
+        body: JSON.stringify({ pushTimes }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? "更新失败");
+        return;
+      }
+      toast.success("推送时间已更新");
+      setEditOpen(false);
+      onUpdate();
+    } catch {
+      toast.error("更新失败，请稍后重试");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card
+      className="paper-rise card-hover"
+      style={{ animationDelay: `${index * 70}ms` }}
+    >
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-center gap-2">
+            <Link href={`/knowledge/${sub.bank.id}`} className="hover:underline">
+              <CardTitle className="font-serif text-base">
+                {sub.bank.title}
+              </CardTitle>
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            订阅人：{sub.subscriber?.name}
+            {sub.subscriber?.uid ? ` (${sub.subscriber.uid})` : ""}
+          </p>
+          {sub.bank.description && (
+            <p className="truncate text-xs text-muted-foreground">
+              {sub.bank.description}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {sub.pushTimes.map((time) => (
+              <Badge key={time} variant="secondary">
+                <Clock className="mr-0.5 size-2.5" />
+                {time}
+              </Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {sub.pushedCount} 次推送 · {sub.pointCount} 张知识卡 ·{" "}
+            {sub.bank.subscriberCount} 人订阅过
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col gap-2">
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted">
+              编辑时间
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>编辑推送时间</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    type="time"
+                    value={newTime}
+                    onChange={(event) => setNewTime(event.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={addTime}
+                    disabled={atTimeLimit}
+                  >
+                    添加
+                  </Button>
+                </div>
+                {atTimeLimit && (
+                  <p className="text-xs text-amber-600">
+                    已达上限 {MAX_PUSH_TIMES_PER_SUBSCRIPTION}/{MAX_PUSH_TIMES_PER_SUBSCRIPTION}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {pushTimes.map((time) => (
+                    <Badge
+                      key={time}
+                      variant="secondary"
+                      className="cursor-pointer"
+                      onClick={() => removeTime(time)}
+                    >
+                      {time} ×
                     </Badge>
                   ))}
                 </div>
