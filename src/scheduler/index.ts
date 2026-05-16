@@ -155,20 +155,20 @@ cron.schedule("* * * * *", async () => {
   const currentTime = getCurrentTimeHHMM();
   console.log(`[Scheduler] Tick at ${currentTime}`);
 
-  await runDueDigestSubscriptions(prisma, currentTime, schedulerTZ);
-  await runDueKnowledgeSubscriptions(prisma, currentTime, schedulerTZ);
-
   const skipDecision = shouldSkipPushToday(now);
   if (skipDecision.skip) {
     if (skipDecision.reason === "holiday") {
       console.log(
-        `[Scheduler] Skip push on holiday: ${skipDecision.holidayName ?? "Unknown holiday"}`
+        `[Scheduler] Skip all pushes on holiday: ${skipDecision.holidayName ?? "Unknown holiday"}`
       );
     } else {
-      console.log("[Scheduler] Skip push on weekend");
+      console.log("[Scheduler] Skip all pushes on weekend");
     }
     return;
   }
+
+  await runDueDigestSubscriptions(prisma, currentTime, schedulerTZ);
+  await runDueKnowledgeSubscriptions(prisma, currentTime, schedulerTZ);
 
   const matchedSubs = await prisma.subscription.findMany({
     where: {
