@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { MAX_PUSH_TIMES_PER_SUBSCRIPTION } from "@/types";
+import {
+  getPushTimeLimitMessage,
+  isPushTimeCountAllowedForUpdate,
+} from "@/lib/subscriptions/push-times";
 
-function normalizePushTimes(pushTimes: unknown): string[] | NextResponse {
+function normalizePushTimes(
+  pushTimes: unknown,
+  existingPushTimes?: string[] | null,
+): string[] | NextResponse {
   if (!Array.isArray(pushTimes) || pushTimes.length === 0) {
     return NextResponse.json(
       { error: "pushTimes must be a non-empty array" },
@@ -22,9 +28,9 @@ function normalizePushTimes(pushTimes: unknown): string[] | NextResponse {
       { status: 400 },
     );
   }
-  if (unique.length > MAX_PUSH_TIMES_PER_SUBSCRIPTION) {
+  if (!isPushTimeCountAllowedForUpdate(unique, existingPushTimes)) {
     return NextResponse.json(
-      { error: `pushTimes cannot exceed ${MAX_PUSH_TIMES_PER_SUBSCRIPTION}` },
+      { error: getPushTimeLimitMessage() },
       { status: 400 },
     );
   }
@@ -67,7 +73,7 @@ export async function PATCH(
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
     const body = await request.json();
-    const times = normalizePushTimes(body.pushTimes);
+    const times = normalizePushTimes(body.pushTimes, auth.subscription?.pushTimes);
     if (times instanceof NextResponse) return times;
 
     const updated = await prisma.knowledgeSubscription.update({

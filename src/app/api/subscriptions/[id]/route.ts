@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { MAX_PUSH_TIMES_PER_SUBSCRIPTION } from "@/types";
+import {
+  getPushTimeLimitMessage,
+  isPushTimeCountAllowedForUpdate,
+} from "@/lib/subscriptions/push-times";
 
 const END_CONDITIONS = ["END_AFTER_COMPLETE", "REPEAT_N_TIMES"] as const;
 type EndConditionValue = (typeof END_CONDITIONS)[number];
@@ -92,9 +95,9 @@ export async function PATCH(
         );
       }
 
-      if (validTimes.length > MAX_PUSH_TIMES_PER_SUBSCRIPTION) {
+      if (!isPushTimeCountAllowedForUpdate(validTimes, sub.pushTimes)) {
         return NextResponse.json(
-          { error: `pushTimes cannot exceed ${MAX_PUSH_TIMES_PER_SUBSCRIPTION}` },
+          { error: getPushTimeLimitMessage() },
           { status: 400 }
         );
       }
