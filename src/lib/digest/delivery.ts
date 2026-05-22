@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client";
 import type { DigestPushPayload, DigestType, TargetType } from "../../types";
+import { isDeliverableDigestType } from "./options";
 import { fetchDigestItems, getAiNewsDigestCacheDate, getDigestItemLimit } from "./sources";
 
 export function getDigestDate(date: Date, timezone: string): string {
@@ -233,6 +234,10 @@ export async function runDueDigestSubscriptions(
   for (const sub of subscriptions) {
     try {
       const digestType = sub.digestType as DigestType;
+      if (!isDeliverableDigestType(digestType)) {
+        console.warn(`[Digest] Skip disabled digest type ${digestType}`);
+        continue;
+      }
       const contentDate =
         digestType === "AI_NEWS"
           ? getAiNewsDigestCacheDate(now, timezone)

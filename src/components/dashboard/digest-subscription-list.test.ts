@@ -24,3 +24,11 @@ test("digest subscription cards show subscriber counts as title-row badges", () 
     /<div className="text-xs text-muted-foreground">\s*\{subscriberCounts\[option\.type\]\} 人已订阅\s*<\/div>/,
   );
 });
+
+test("digest subscription cards render only subscribable digest options", () => {
+  assert.match(source, /SUBSCRIBABLE_DIGEST_TYPES/);
+  assert.match(
+    source,
+    /const DIGEST_OPTIONS = ALL_DIGEST_OPTIONS\.filter\(\(option\) =>\s*SUBSCRIBABLE_DIGEST_TYPE_SET\.has\(option\.type\),\s*\);/,
+  );
+});

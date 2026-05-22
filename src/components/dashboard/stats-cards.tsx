@@ -7,6 +7,8 @@ interface Stats {
   subscribedCount: number;
   todayPushed: number;
   todayTotal: number;
+  createdQuestionBanksCount: number;
+  createdKnowledgeBanksCount: number;
   createdBanksCount: number;
 }
 
@@ -44,6 +46,8 @@ export function StatsCards() {
     subscribedCount: 0,
     todayPushed: 0,
     todayTotal: 0,
+    createdQuestionBanksCount: 0,
+    createdKnowledgeBanksCount: 0,
     createdBanksCount: 0,
   };
 
@@ -70,7 +74,9 @@ export function StatsCards() {
           <p className="font-serif text-4xl font-semibold text-foreground sm:text-[2.2rem]">
             {s.createdBanksCount}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">我创建的</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            我创建的 · 题库 {s.createdQuestionBanksCount} · 知识库 {s.createdKnowledgeBanksCount}
+          </p>
         </CardContent>
       </Card>
     </div>

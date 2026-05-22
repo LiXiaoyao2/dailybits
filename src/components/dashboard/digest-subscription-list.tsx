@@ -25,6 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SUBSCRIBABLE_DIGEST_TYPES } from "@/lib/digest/options";
 import {
   DIGEST_TYPES,
   type DigestSubscriptionCounts,
@@ -53,7 +54,7 @@ interface DigestOption {
   icon: ComponentType<{ className?: string }>;
 }
 
-const DIGEST_OPTIONS: DigestOption[] = [
+const ALL_DIGEST_OPTIONS: DigestOption[] = [
   {
     type: "GITHUB_TRENDING",
     title: "GitHub Trending",
@@ -76,6 +77,11 @@ const DIGEST_OPTIONS: DigestOption[] = [
     icon: FileText,
   },
 ];
+
+const SUBSCRIBABLE_DIGEST_TYPE_SET = new Set<DigestType>(SUBSCRIBABLE_DIGEST_TYPES);
+const DIGEST_OPTIONS = ALL_DIGEST_OPTIONS.filter((option) =>
+  SUBSCRIBABLE_DIGEST_TYPE_SET.has(option.type),
+);
 
 const DEFAULT_SUBSCRIBER_COUNTS = Object.fromEntries(
   DIGEST_TYPES.map((digestType) => [digestType, 0]),
@@ -255,9 +261,9 @@ export function DigestSubscriptionList({
     return (
       <section className="space-y-4">
         <h2 className="font-serif text-xl font-semibold">{title}</h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          {[1, 2, 3].map((item) => (
-            <Card key={item} className="animate-pulse">
+        <div className="grid gap-3 md:grid-cols-2">
+          {DIGEST_OPTIONS.map((option) => (
+            <Card key={option.type} className="animate-pulse">
               <CardContent className="space-y-3 pt-6">
                 <div className="h-5 w-32 rounded bg-muted" />
                 <div className="h-4 w-full rounded bg-muted" />
@@ -285,7 +291,7 @@ export function DigestSubscriptionList({
         </Badge>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2">
         {DIGEST_OPTIONS.map((option, index) => {
           const sub = subscriptionByType.get(option.type);
           const Icon = option.icon;

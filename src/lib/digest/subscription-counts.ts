@@ -1,6 +1,7 @@
 import type { DigestType } from "../../types";
+import { ALL_DIGEST_TYPES } from "./options";
 
-export const DIGEST_TYPES = ["GITHUB_TRENDING", "AI_NEWS", "ARXIV_AI_PAPERS"] as const;
+export const DIGEST_TYPES = ALL_DIGEST_TYPES;
 
 export type DigestSubscriptionCounts = Record<DigestType, number>;
 
