@@ -11,6 +11,6 @@ test("question and knowledge subscriptions default to two daytime push times", (
   assert.deepEqual(DEFAULT_KNOWLEDGE_PUSH_TIMES, DEFAULT_PUSH_TIMES);
 });
 
-test("question and knowledge subscriptions allow at most eight push times", () => {
-  assert.equal(MAX_PUSH_TIMES_PER_SUBSCRIPTION, 8);
+test("question and knowledge subscriptions allow at most fifteen push times", () => {
+  assert.equal(MAX_PUSH_TIMES_PER_SUBSCRIPTION, 15);
 });
