@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { SubscriptionList } from "@/components/dashboard/subscription-list";
 import { KnowledgeSubscriptionList } from "@/components/dashboard/knowledge-subscription-list";
+import { DigestSubscriptionList } from "@/components/dashboard/digest-subscription-list";
 import { PushHistory } from "@/components/dashboard/push-history";
 
 export default function DashboardPage() {
@@ -32,6 +33,7 @@ export default function DashboardPage() {
       <StatsCards />
       <SubscriptionList />
       <KnowledgeSubscriptionList />
+      <DigestSubscriptionList />
       <PushHistory />
     </div>
   );
