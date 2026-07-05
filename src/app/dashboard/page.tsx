@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { StatsCards } from "@/components/dashboard/stats-cards";
+import { CreatedContentList } from "@/components/dashboard/created-content-list";
 import { SubscriptionList } from "@/components/dashboard/subscription-list";
 import { KnowledgeSubscriptionList } from "@/components/dashboard/knowledge-subscription-list";
 import { DigestSubscriptionList } from "@/components/dashboard/digest-subscription-list";
@@ -31,6 +32,7 @@ export default function DashboardPage() {
     <div className="page-enter space-y-8">
       <h1 className="font-serif text-3xl font-semibold tracking-wide text-foreground">我的书房</h1>
       <StatsCards />
+      <CreatedContentList />
       <SubscriptionList />
       <KnowledgeSubscriptionList />
       <DigestSubscriptionList />

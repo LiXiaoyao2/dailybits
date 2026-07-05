@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client";
 import type { DigestPushPayload, DigestType, TargetType } from "../../types";
+import { isDeliverableDigestType } from "./options";
 import { fetchDigestItems, getAiNewsDigestCacheDate, getDigestItemLimit } from "./sources";
 
 export function getDigestDate(date: Date, timezone: string): string {
@@ -131,7 +132,11 @@ function parseCachedItems(items: unknown): string[] | null {
   return normalized.length > 0 &&
     normalized.every((item) => {
       const value = item.trim();
-      return value.startsWith("### ") && value.includes("\n| ") && value.includes("\n| ---");
+      const isTablePage = value.includes("\n| ") && value.includes("\n| ---");
+      const isNumberedListPage = /(^|\n)\*\*\d+\. .+\*\*/.test(value);
+      const isPlainListPage = /(^|\n)\*\*\[[^\]]+\]\([^)]+\)\*\*/.test(value);
+      const isListPage = isNumberedListPage || isPlainListPage;
+      return value.startsWith("### ") ? isTablePage || isListPage : isListPage;
     })
     ? normalized
     : null;
@@ -229,6 +234,10 @@ export async function runDueDigestSubscriptions(
   for (const sub of subscriptions) {
     try {
       const digestType = sub.digestType as DigestType;
+      if (!isDeliverableDigestType(digestType)) {
+        console.warn(`[Digest] Skip disabled digest type ${digestType}`);
+        continue;
+      }
       const contentDate =
         digestType === "AI_NEWS"
           ? getAiNewsDigestCacheDate(now, timezone)

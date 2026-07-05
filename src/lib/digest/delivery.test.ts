@@ -4,7 +4,9 @@ import {
   buildDigestFetchFailureCache,
   buildDigestPushLogKey,
   getDigestFetchFailureCooldownMs,
+  getDigestItemsForDate,
   isActiveDigestFetchFailureCache,
+  runDueDigestSubscriptions,
 } from "./delivery";
 
 test("digest push log key includes push time so the same digest can push at a new time today", () => {
@@ -62,4 +64,86 @@ test("digest fetch failure cooldown defaults to three hours", () => {
       process.env.DIGEST_FETCH_FAILURE_COOLDOWN_MINUTES = original;
     }
   }
+});
+
+test("digest cache accepts list-formatted markdown pages", async () => {
+  const cachedItems = [
+    [
+      "**[AI news](https://example.com/news)**",
+      "",
+      "这是一条列表格式的摘要。",
+    ].join("\n"),
+  ];
+  const prisma = {
+    digestCache: {
+      findUnique: async () => ({ items: cachedItems }),
+      upsert: async () => {
+        throw new Error("cached list pages should not refetch");
+      },
+    },
+  };
+
+  const items = await getDigestItemsForDate(
+    prisma as never,
+    "AI_NEWS",
+    "2026-05-14",
+  );
+
+  assert.deepEqual(items, cachedItems);
+});
+
+test("scheduler skips disabled arXiv paper digest subscriptions before fetch or push work", async () => {
+  let pushLogLookupCount = 0;
+  let cacheLookupCount = 0;
+  let pushLogCreateCount = 0;
+
+  const prisma = {
+    digestSubscription: {
+      findMany: async () => [
+        {
+          id: "sub-paper",
+          targetType: "USER",
+          targetId: "user-1",
+          digestType: "ARXIV_AI_PAPERS",
+          pushTimes: ["09:40"],
+          isActive: true,
+        },
+      ],
+    },
+    digestPushLog: {
+      findUnique: async () => {
+        pushLogLookupCount += 1;
+        return null;
+      },
+      create: async () => {
+        pushLogCreateCount += 1;
+      },
+    },
+    digestCache: {
+      findUnique: async () => {
+        cacheLookupCount += 1;
+        return {
+          items: [
+            [
+              "**[Paper](https://example.com/paper)**",
+              "",
+              "论文摘要。",
+            ].join("\n"),
+          ],
+        };
+      },
+      upsert: async () => {
+        throw new Error("disabled digests should not fetch or cache");
+      },
+    },
+    user: {
+      findUnique: async () => ({ uid: "uid-1" }),
+    },
+  };
+
+  await runDueDigestSubscriptions(prisma as never, "09:40", "Asia/Shanghai");
+
+  assert.equal(pushLogLookupCount, 0);
+  assert.equal(cacheLookupCount, 0);
+  assert.equal(pushLogCreateCount, 0);
 });

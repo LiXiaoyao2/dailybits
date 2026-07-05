@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") ?? "";
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const ownerIsMine = searchParams.get("owner") === "mine";
     const targetType = (searchParams.get("targetType") ?? "USER") as "USER" | "GROUP";
     const targetIdParam = searchParams.get("targetId");
     const session = await getServerSession(authOptions);
@@ -96,7 +97,18 @@ export async function GET(request: NextRequest) {
           ],
         }
       : {};
-    const visibilityWhere = await getVisibilityWhere(session?.user?.id);
+    let visibilityWhere: Prisma.KnowledgeBankWhereInput;
+    if (ownerIsMine) {
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { error: "Unauthorized for owner=mine" },
+          { status: 401 },
+        );
+      }
+      visibilityWhere = { creatorId: session.user.id };
+    } else {
+      visibilityWhere = await getVisibilityWhere(session?.user?.id);
+    }
     const where: Prisma.KnowledgeBankWhereInput = search
       ? { AND: [searchWhere, visibilityWhere] }
       : visibilityWhere;
@@ -112,7 +124,9 @@ export async function GET(request: NextRequest) {
             select: { points: true },
           },
         },
-        orderBy: [{ subscriberCount: "desc" }, { updatedAt: "desc" }],
+        orderBy: ownerIsMine
+          ? [{ updatedAt: "desc" }]
+          : [{ subscriberCount: "desc" }, { updatedAt: "desc" }],
         skip: (page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
       }),

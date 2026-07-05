@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAiNewsDigestCacheDate } from "@/lib/digest/sources";
 import {
+  SUBSCRIBABLE_DIGEST_TYPES,
+  isSubscribableDigestType,
+} from "@/lib/digest/options";
+import {
   getDigestDate,
   getDigestItemsForDate,
   pushDigestToTarget,
   resolveDigestReceiver,
 } from "@/lib/digest/delivery";
 import type { DigestType, TargetType } from "@/types";
-
-const DIGEST_TYPES = ["GITHUB_TRENDING", "AI_NEWS", "ARXIV_AI_PAPERS"] as const;
 
 export async function POST(request: NextRequest) {
   if (process.env.NODE_ENV !== "development") {
@@ -28,9 +30,9 @@ export async function POST(request: NextRequest) {
       targetId?: string;
     };
 
-    if (!DIGEST_TYPES.includes(digestType)) {
+    if (!isSubscribableDigestType(digestType)) {
       return NextResponse.json(
-        { error: "digestType must be GITHUB_TRENDING, AI_NEWS, or ARXIV_AI_PAPERS" },
+        { error: `digestType must be ${SUBSCRIBABLE_DIGEST_TYPES.join(" or ")}` },
         { status: 400 },
       );
     }
@@ -72,12 +74,7 @@ export async function POST(request: NextRequest) {
     );
     const success = await pushDigestToTarget({
       receiver,
-      title:
-        digestType === "AI_NEWS"
-          ? "AI News Daily"
-          : digestType === "ARXIV_AI_PAPERS"
-            ? "arXiv AI Papers Daily"
-            : "GitHub Trending Daily",
+      title: digestType === "AI_NEWS" ? "AI News Daily" : "GitHub Trending Daily",
       items,
       digestType,
       digestDate,

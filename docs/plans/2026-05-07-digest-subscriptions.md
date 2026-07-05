@@ -17,7 +17,7 @@ Each push payload uses a string list. Each string is Markdown and can be rendere
   "receiver": "user-or-group-id",
   "title": "GitHub Trending Daily",
   "items": [
-    "📦 **[owner/repo](https://github.com/owner/repo)**\n*TypeScript | ⭐ 1234 (🚀今日 +56) | 🍴 78*\n💡**AI 总结**：..."
+    "### GitHub Trending 总览 1/4\n| 项目 | 一句话总结 |\n| --- | --- |\n| [owner/repo](https://github.com/owner/repo)<br>⭐ [1,234 / +56] | AI 总结... |"
   ],
   "digestType": "GITHUB_TRENDING",
   "digestDate": "2026-05-07"
@@ -68,6 +68,12 @@ List current user's active digest subscriptions:
 
 ```http
 GET /api/digest-subscriptions/mine
+```
+
+Fetch active subscriber counts for the digest cards:
+
+```http
+GET /api/digest-subscriptions
 ```
 
 Update push times:
@@ -126,7 +132,7 @@ ARXIV_RETRY_BASE_MS="15000"
 
 `GITHUB_TOKEN` is optional but recommended in production to increase GitHub API rate limits for the fallback path and README fetches. GitHub Trending items fetch each repo README and use the configured LLM (`LLM_API_KEY`, `LLM_API_BASE_URL`, `LLM_MODEL`) to generate a concise summary.
 
-Daily digest payloads are sent as three Markdown overview table strings by default. Each table contains up to four rows, so `DIGEST_ITEM_LIMIT="12"` gives users twelve source items without appending the older long-form detail items. GitHub tables show project, language, stars/today growth, and one-line summary; AI news tables show title, source, and one-line summary; arXiv tables show paper, publish date, and one-line summary.
+Daily digest payloads are sent as Markdown overview table strings by default. Each table contains up to three rows, so `DIGEST_ITEM_LIMIT="12"` gives users twelve source items across four pages without appending the older long-form detail items. GitHub tables show the project with compact stars/today growth below it, plus a summary capped at 200 characters; AI news tables show title and a 200-character summary; arXiv tables show paper, publish date, and a 200-character summary. Digest cards show active subscription counts per digest type.
 
 Fetch failures are also cached for a short cooldown window. `DIGEST_FETCH_FAILURE_COOLDOWN_MINUTES="180"` prevents later user push times from repeatedly calling the same failing upstream source. This is especially useful for arXiv rate limits. arXiv uses fewer retries by default (`ARXIV_FETCH_ATTEMPTS="2"`), and HTTP 429 responses are not retried immediately.
 

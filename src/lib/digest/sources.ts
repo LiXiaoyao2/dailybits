@@ -93,8 +93,9 @@ const DEFAULT_README_SUMMARY_MAX_CHARS = 5000;
 const DEFAULT_README_SUMMARY_CONCURRENCY = 2;
 const DEFAULT_DIGEST_AI_CONCURRENCY = 3;
 const DEFAULT_DIGEST_ITEM_LIMIT = 12;
-const DIGEST_OVERVIEW_PAGE_SIZE = 4;
-const DIGEST_OVERVIEW_PAGE_COUNT = 3;
+const DIGEST_OVERVIEW_SUMMARY_MAX_CHARS = 200;
+const DIGEST_OVERVIEW_PAGE_SIZE = 3;
+const DIGEST_OVERVIEW_PAGE_COUNT = 4;
 const DIGEST_OVERVIEW_ITEM_LIMIT =
   DIGEST_OVERVIEW_PAGE_SIZE * DIGEST_OVERVIEW_PAGE_COUNT;
 const DEFAULT_ARXIV_FETCH_ATTEMPTS = 2;
@@ -132,10 +133,6 @@ function markdownLink(label: string, url?: string): string {
   return url ? `[${label}](${url})` : label;
 }
 
-function escapeMarkdownTableCell(value: string | undefined): string {
-  return compactWhitespace(value || "-").replace(/\|/g, "\\|");
-}
-
 function truncate(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength - 3).trim()}...`;
@@ -156,26 +153,29 @@ function splitIntoOverviewPages<T>(items: T[]): T[][] {
   return pages;
 }
 
-function formatOverviewTables(
-  title: string,
-  headers: string[],
-  rows: string[][],
+function formatOverviewListPages(
+  rows: Array<{ itemTitle: string; meta?: string; summary: string }>,
 ): string[] {
   const pages = splitIntoOverviewPages(rows);
-  return pages.map((pageRows, index) => [
-    `### ${title} ${index + 1}/${pages.length}`,
-    `| ${headers.join(" | ")} |`,
-    `| ${headers.map(() => "---").join(" | ")} |`,
-    ...pageRows.map((row) => `| ${row.join(" | ")} |`),
-  ].join("\n"));
+  return pages.map((pageRows) => [
+    ...pageRows.flatMap((row) => [
+      [
+        `**${row.itemTitle}**`,
+        row.meta,
+      ].filter(Boolean).join("  "),
+      "",
+      row.summary,
+      "",
+    ]),
+  ].join("\n").trim());
 }
 
 function formatGithubStarTrend(repo: GithubRepo): string {
   const parts = [
-    repo.totalStars ? `⭐ ${repo.totalStars}` : null,
-    repo.starsToday ? `今日 +${repo.starsToday}` : null,
+    repo.totalStars || null,
+    repo.starsToday ? `+${repo.starsToday}` : null,
   ].filter(Boolean);
-  return parts.join(" / ") || "-";
+  return parts.length > 0 ? `⭐ [${parts.join(" / ")}]` : "-";
 }
 
 function clampDigestItemLimit(value: number): number {
@@ -193,39 +193,37 @@ export function getDigestItemLimit(): number {
 }
 
 export function formatGithubOverviewPages(repos: GithubRepo[]): string[] {
-  return formatOverviewTables(
-    "GitHub Trending 总览",
-    ["项目", "语言", "Star 趋势", "一句话总结"],
-    repos.map((repo) => [
-      escapeMarkdownTableCell(markdownLink(repo.fullName, repo.url)),
-      escapeMarkdownTableCell(repo.language),
-      escapeMarkdownTableCell(formatGithubStarTrend(repo)),
-      escapeMarkdownTableCell(oneLineSummary(repo.aiSummary || repo.description, 88)),
-    ]),
+  return formatOverviewListPages(
+    repos.map((repo) => {
+      const starTrend = formatGithubStarTrend(repo);
+      return {
+        itemTitle: markdownLink(repo.fullName, repo.url),
+        meta: starTrend === "-" ? undefined : starTrend,
+        summary: oneLineSummary(repo.aiSummary || repo.description, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
+      };
+    }),
   );
 }
 
 export function formatAiNewsOverviewPages(items: DigestItem[]): string[] {
-  return formatOverviewTables(
-    "AI 新闻总览",
-    ["标题", "来源", "一句话摘要"],
-    items.map((item) => [
-      escapeMarkdownTableCell(markdownLink(item.title, item.url)),
-      escapeMarkdownTableCell(item.source),
-      escapeMarkdownTableCell(oneLineSummary(item.summary, 96)),
-    ]),
+  return formatOverviewListPages(
+    items.map((item) => ({
+      itemTitle: markdownLink(item.title, item.url),
+      summary: oneLineSummary(item.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
+    })),
   );
 }
 
 export function formatArxivOverviewPages(papers: ArxivPaper[]): string[] {
-  return formatOverviewTables(
-    "arXiv 论文总览",
-    ["论文", "发布时间", "一句话摘要"],
-    papers.map((paper) => [
-      escapeMarkdownTableCell(markdownLink(paper.title, paper.url)),
-      escapeMarkdownTableCell(paper.published?.slice(0, 10)),
-      escapeMarkdownTableCell(oneLineSummary(paper.summary, 100)),
-    ]),
+  return formatOverviewListPages(
+    papers.map((paper) => {
+      const published = paper.published?.slice(0, 10);
+      return {
+        itemTitle: markdownLink(paper.title, paper.url),
+        meta: published ? `\`${published}\`` : undefined,
+        summary: oneLineSummary(paper.summary, DIGEST_OVERVIEW_SUMMARY_MAX_CHARS),
+      };
+    }),
   );
 }
 
@@ -252,10 +250,18 @@ export function buildGithubReadmeSummaryText(
 
 export function getGithubReadmeSummaryInstruction(): string {
   return [
-    "请基于这个 GitHub 项目的 README，用简体中文写 3 到 5 句总结。",
+    "请基于这个 GitHub 项目的 README，用简体中文写 80 到 120 字的总结，严格控制长度，最多不超过 120 字。",
     "必须说明：它解决什么问题、核心能力是什么、适合谁关注或使用。",
     "不要逐字翻译 README，不要添加原文没有的信息，不要输出英文摘要，不要输出 Markdown，不要输出标题。",
   ].join("\n");
+}
+
+export function getAiNewsTranslationInstruction(): string {
+  return "请把下面的 AI 新闻标题和摘要整合为简体中文 80 到 120 字摘要，严格控制长度，最多不超过 120 字；原文太长要压缩，信息不足可以少于 80 字，不要硬编；保留关键主体、动作和影响。";
+}
+
+export function getArxivAbstractSummaryInstruction(): string {
+  return "请基于下面的论文 Abstract，用简体中文写 80 到 120 字摘要，严格控制长度，最多不超过 120 字；保留研究问题、方法和主要贡献；论文标题不用翻译。";
 }
 
 function getAihotApiBaseUrl(): string {
@@ -519,7 +525,7 @@ async function rewriteWithDigestAi(
       {
         role: "system",
         content:
-          "You rewrite English AI digest material into concise, accurate Chinese. Return plain text only.",
+          "You rewrite AI digest material in Chinese or English into concise, accurate Chinese. Return plain text only.",
       },
       {
         role: "user",
@@ -793,8 +799,8 @@ async function translateAiNewsItems(items: DigestItem[]): Promise<DigestItem[]> 
   return mapWithConcurrency(items, getDigestAiConcurrency(), async (item) => {
     try {
       const translatedSummary = await rewriteWithDigestAi(
-        item.summary,
-        "请把下面的 AI 新闻摘要翻译并轻度改写成中文，控制在 80-140 个中文字符，保留关键主体、动作和影响。",
+        [`标题：${item.title}`, `原摘要：${item.summary}`].join("\n"),
+        getAiNewsTranslationInstruction(),
         maxChars,
       );
       return translatedSummary ? { ...item, summary: translatedSummary } : item;
@@ -813,7 +819,10 @@ export async function fetchAiNewsDigest(
   if (isAihotAiNewsEnabled()) {
     try {
       const items = await fetchAihotItems(itemLimit, options.digestDate);
-      if (items.length > 0) return formatAiNewsOverviewPages(items);
+      if (items.length > 0) {
+        const translatedItems = await translateAiNewsItems(items);
+        return formatAiNewsOverviewPages(translatedItems);
+      }
     } catch (error) {
       console.warn("[Digest] AIHOT fetch failed, falling back to RSS/HN", error);
     }
@@ -870,7 +879,7 @@ async function translateArxivPapers(papers: ArxivPaper[]): Promise<ArxivPaper[]>
     try {
       const translatedSummary = await rewriteWithDigestAi(
         paper.summary,
-        "请把下面的论文 Abstract 翻译并压缩成中文，控制在 160-260 个中文字符，保留研究问题、方法和主要贡献；论文标题不用翻译。",
+        getArxivAbstractSummaryInstruction(),
         maxChars,
       );
       return translatedSummary ? { ...paper, summary: translatedSummary } : paper;

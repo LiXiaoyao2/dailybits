@@ -35,6 +35,7 @@ export interface KnowledgeCardProps {
   appearDelayMs?: number;
   targetType?: "USER" | "GROUP";
   targetId?: string;
+  onSubscribed?: () => void;
 }
 
 export function KnowledgeCard({
@@ -49,6 +50,7 @@ export function KnowledgeCard({
   appearDelayMs = 0,
   targetType = "USER",
   targetId,
+  onSubscribed,
 }: KnowledgeCardProps) {
   const [subscribed, setSubscribed] = useState(isSubscribed);
   const [subCount, setSubCount] = useState(subscriberCount);
@@ -56,7 +58,7 @@ export function KnowledgeCard({
   const [pushTimes, setPushTimes] = useState<string[]>([
     ...DEFAULT_KNOWLEDGE_PUSH_TIMES,
   ]);
-  const [newTime, setNewTime] = useState("09:00");
+  const [newTime, setNewTime] = useState(DEFAULT_KNOWLEDGE_PUSH_TIMES[0]);
   const [loading, setLoading] = useState(false);
 
   const atSubLimit = subscriptionCount >= MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET;
@@ -94,6 +96,7 @@ export function KnowledgeCard({
       setSubscribed(true);
       setSubCount((count) => count + 1);
       setOpen(false);
+      onSubscribed?.();
     } catch {
       toast.error("订阅失败，请稍后重试");
     } finally {

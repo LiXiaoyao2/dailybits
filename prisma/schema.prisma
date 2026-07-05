@@ -210,7 +210,7 @@ model KnowledgeSubscription {
   targetType   TargetType         @default(USER)
   targetId     String
   bankId       String
-  pushTimes    String[]           @default(["09:00"])
+  pushTimes    String[]           @default(["09:30", "14:00", "17:00"])
   isActive     Boolean            @default(true)
   subscriberId String?
   createdAt    DateTime           @default(now())

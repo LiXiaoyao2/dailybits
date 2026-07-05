@@ -4,7 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import type { ComponentType } from "react";
-import { Bell, FileText, Github, Newspaper, Pencil, Trash2 } from "lucide-react";
+import {
+  Bell,
+  FileText,
+  Github,
+  Newspaper,
+  Pencil,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +25,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SUBSCRIBABLE_DIGEST_TYPES } from "@/lib/digest/options";
+import {
+  DIGEST_TYPES,
+  type DigestSubscriptionCounts,
+} from "@/lib/digest/subscription-counts";
 import type { DigestType, TargetType } from "@/types";
 
 interface DigestSubscription {
@@ -41,11 +54,11 @@ interface DigestOption {
   icon: ComponentType<{ className?: string }>;
 }
 
-const DIGEST_OPTIONS: DigestOption[] = [
+const ALL_DIGEST_OPTIONS: DigestOption[] = [
   {
     type: "GITHUB_TRENDING",
     title: "GitHub Trending",
-    description: "每日趋势项目、star、语言和项目摘要。",
+    description: "每日趋势项目、star 增长和项目摘要。",
     defaultTime: "09:00",
     icon: Github,
   },
@@ -59,14 +72,36 @@ const DIGEST_OPTIONS: DigestOption[] = [
   {
     type: "ARXIV_AI_PAPERS",
     title: "arXiv AI 论文",
-    description: "最新 AI 相关论文、作者、分类和摘要。",
+    description: "最新 AI 相关论文、发布时间和摘要。",
     defaultTime: "09:40",
     icon: FileText,
   },
 ];
 
+const SUBSCRIBABLE_DIGEST_TYPE_SET = new Set<DigestType>(SUBSCRIBABLE_DIGEST_TYPES);
+const DIGEST_OPTIONS = ALL_DIGEST_OPTIONS.filter((option) =>
+  SUBSCRIBABLE_DIGEST_TYPE_SET.has(option.type),
+);
+
+const DEFAULT_SUBSCRIBER_COUNTS = Object.fromEntries(
+  DIGEST_TYPES.map((digestType) => [digestType, 0]),
+) as DigestSubscriptionCounts;
+
 function getTime(sub?: DigestSubscription, option?: DigestOption): string {
   return sub?.pushTimes[0] ?? option?.defaultTime ?? "09:00";
+}
+
+function parseSubscriberCounts(value: unknown): DigestSubscriptionCounts | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const counts = (value as { subscriberCounts?: unknown }).subscriberCounts;
+  if (!counts || typeof counts !== "object" || Array.isArray(counts)) return null;
+
+  return Object.fromEntries(
+    DIGEST_TYPES.map((digestType) => {
+      const raw = (counts as Partial<Record<DigestType, unknown>>)[digestType];
+      return [digestType, typeof raw === "number" && Number.isFinite(raw) ? raw : 0];
+    }),
+  ) as DigestSubscriptionCounts;
 }
 
 export function DigestSubscriptionList({
@@ -80,6 +115,9 @@ export function DigestSubscriptionList({
   const [loading, setLoading] = useState(true);
   const [savingType, setSavingType] = useState<DigestType | null>(null);
   const [editingType, setEditingType] = useState<DigestType | null>(null);
+  const [subscriberCounts, setSubscriberCounts] = useState<DigestSubscriptionCounts>(
+    DEFAULT_SUBSCRIBER_COUNTS,
+  );
   const [draftTimes, setDraftTimes] = useState<Record<DigestType, string>>({
     GITHUB_TRENDING: "09:00",
     AI_NEWS: "09:20",
@@ -111,11 +149,15 @@ export function DigestSubscriptionList({
   const refresh = useCallback(async () => {
     const res = await fetch(collectionEndpoint);
     const data = await res.json();
+    const counts = parseSubscriberCounts(data);
     const items = Array.isArray(data)
       ? data
       : Array.isArray(data?.subscriptions)
         ? data.subscriptions
         : null;
+    if (counts) {
+      setSubscriberCounts(counts);
+    }
     if (items) {
       setSubscriptions(items);
       setDraftTimes((prev) => {
@@ -131,7 +173,14 @@ export function DigestSubscriptionList({
   useEffect(() => {
     if (status === "loading") return;
     if (targetType === "USER" && status === "unauthenticated") {
-      setLoading(false);
+      fetch("/api/digest-subscriptions")
+        .then((res) => res.json())
+        .then((data) => {
+          const counts = parseSubscriberCounts(data);
+          if (counts) setSubscriberCounts(counts);
+        })
+        .catch(() => undefined)
+        .finally(() => setLoading(false));
       return;
     }
     refresh()
@@ -212,9 +261,9 @@ export function DigestSubscriptionList({
     return (
       <section className="space-y-4">
         <h2 className="font-serif text-xl font-semibold">{title}</h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          {[1, 2, 3].map((item) => (
-            <Card key={item} className="animate-pulse">
+        <div className="grid gap-3 md:grid-cols-2">
+          {DIGEST_OPTIONS.map((option) => (
+            <Card key={option.type} className="animate-pulse">
               <CardContent className="space-y-3 pt-6">
                 <div className="h-5 w-32 rounded bg-muted" />
                 <div className="h-4 w-full rounded bg-muted" />
@@ -242,7 +291,7 @@ export function DigestSubscriptionList({
         </Badge>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2">
         {DIGEST_OPTIONS.map((option, index) => {
           const sub = subscriptionByType.get(option.type);
           const Icon = option.icon;
@@ -259,7 +308,17 @@ export function DigestSubscriptionList({
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
                   <Icon className="size-4" />
                 </div>
-                <CardTitle>{option.title}</CardTitle>
+                <CardTitle className="flex min-w-0 flex-wrap items-center gap-2">
+                  {option.title}
+                  <Badge
+                    variant="outline"
+                    className="gap-1 border-primary/20 bg-primary/5 text-primary"
+                    aria-label={`${option.title} ${subscriberCounts[option.type]} 人已订阅`}
+                  >
+                    <Users className="size-3" />
+                    {subscriberCounts[option.type]} 人已订阅
+                  </Badge>
+                </CardTitle>
                 <CardDescription>{option.description}</CardDescription>
                 <CardAction>
                   {sub ? (

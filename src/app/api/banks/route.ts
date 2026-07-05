@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") ?? "";
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const ownerIsMine = searchParams.get("owner") === "mine";
 
     const searchWhere: Prisma.QuestionBankWhereInput = search
       ? {
@@ -77,14 +78,21 @@ export async function GET(request: NextRequest) {
         }
       : {};
 
-    const { searchParams: sp } = new URL(request.url);
-    const targetType = (sp.get("targetType") ?? "USER") as "USER" | "GROUP";
-    const targetIdParam = sp.get("targetId");
+    const targetType = (searchParams.get("targetType") ?? "USER") as "USER" | "GROUP";
+    const targetIdParam = searchParams.get("targetId");
 
     const session = await getServerSession(authOptions);
 
     let visibilityWhere: Prisma.QuestionBankWhereInput;
-    if (!session?.user?.id) {
+    if (ownerIsMine) {
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { error: "Unauthorized for owner=mine" },
+          { status: 401 }
+        );
+      }
+      visibilityWhere = { creatorId: session.user.id };
+    } else if (!session?.user?.id) {
       visibilityWhere = { visibility: "PUBLIC" };
     } else {
       const user = await prisma.user.findUnique({
@@ -123,7 +131,9 @@ export async function GET(request: NextRequest) {
             select: { questions: true },
           },
         },
-        orderBy: { subscriberCount: "desc" },
+        orderBy: ownerIsMine
+          ? [{ updatedAt: "desc" }]
+          : [{ subscriberCount: "desc" }],
         skip: (page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
       }),

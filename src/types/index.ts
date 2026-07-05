@@ -17,10 +17,10 @@ export type DigestType = "GITHUB_TRENDING" | "AI_NEWS" | "ARXIV_AI_PAPERS";
 export const MAX_SUBSCRIPTIONS_PER_TARGET = 5;
 export const MAX_DIGEST_SUBSCRIPTIONS_PER_TARGET = 3;
 export const MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET = 5;
-export const MAX_PUSH_TIMES_PER_SUBSCRIPTION = 10;
-export const DEFAULT_PUSH_TIMES = ["09:30", "14:00", "17:00"];
+export const MAX_PUSH_TIMES_PER_SUBSCRIPTION = 15;
+export const DEFAULT_PUSH_TIMES = ["09:30", "14:00"];
 export const DEFAULT_DIGEST_PUSH_TIMES = ["09:00"];
-export const DEFAULT_KNOWLEDGE_PUSH_TIMES = ["09:00"];
+export const DEFAULT_KNOWLEDGE_PUSH_TIMES = DEFAULT_PUSH_TIMES;
 
 export interface GeneratedQuestion {
   content: string;
@@ -53,7 +53,7 @@ export interface DigestPushPayload {
 export interface KnowledgePushPayload {
   receiver: string;
   title: string;
-  content: string;
+  items: string[];
   knowledgeBankId: string;
   knowledgePointId: string;
 }

@@ -20,7 +20,6 @@ export default async function KnowledgeBankPage({
       },
       points: {
         orderBy: [{ orderIndex: "asc" }, { createdAt: "asc" }],
-        take: 100,
       },
       _count: { select: { points: true } },
     },

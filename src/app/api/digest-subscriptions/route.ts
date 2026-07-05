@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import {
+  SUBSCRIBABLE_DIGEST_TYPES,
+  isSubscribableDigestType,
+} from "@/lib/digest/options";
+import { buildDigestSubscriptionCounts } from "@/lib/digest/subscription-counts";
 import { prisma } from "@/lib/prisma";
 import { getSubscriptionReuseAction } from "@/lib/subscriptions/reuse";
 import {
@@ -10,12 +15,30 @@ import {
   type DigestType,
 } from "@/types";
 
-const DIGEST_TYPES = ["GITHUB_TRENDING", "AI_NEWS", "ARXIV_AI_PAPERS"] as const;
+export async function GET() {
+  try {
+    const countRows = await prisma.digestSubscription.groupBy({
+      by: ["digestType"],
+      where: { isActive: true },
+      _count: { _all: true },
+    });
+
+    return NextResponse.json({
+      subscriberCounts: buildDigestSubscriptionCounts(countRows),
+    });
+  } catch (error) {
+    console.error("[GET /api/digest-subscriptions]", error);
+    return NextResponse.json(
+      { error: "Failed to fetch digest subscription counts" },
+      { status: 500 },
+    );
+  }
+}
 
 function parseDigestType(value: unknown): DigestType | NextResponse {
-  if (typeof value !== "string" || !DIGEST_TYPES.includes(value as DigestType)) {
+  if (!isSubscribableDigestType(value)) {
     return NextResponse.json(
-      { error: "digestType must be GITHUB_TRENDING, AI_NEWS, or ARXIV_AI_PAPERS" },
+      { error: `digestType must be ${SUBSCRIBABLE_DIGEST_TYPES.join(" or ")}` },
       { status: 400 },
     );
   }

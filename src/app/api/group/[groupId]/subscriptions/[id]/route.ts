@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getPushTimeLimitMessage,
+  isPushTimeCountAllowedForUpdate,
+} from "@/lib/subscriptions/push-times";
 import { prisma } from "@/lib/prisma";
-import { MAX_PUSH_TIMES_PER_SUBSCRIPTION } from "@/types";
 
 type RouteContext = { params: Promise<{ groupId: string; id: string }> };
 
@@ -45,9 +48,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         { status: 400 }
       );
     }
-    if (validTimes.length > MAX_PUSH_TIMES_PER_SUBSCRIPTION) {
+    if (!isPushTimeCountAllowedForUpdate(validTimes, subscription.pushTimes)) {
       return NextResponse.json(
-        { error: `pushTimes cannot exceed ${MAX_PUSH_TIMES_PER_SUBSCRIPTION}` },
+        { error: getPushTimeLimitMessage() },
         { status: 400 }
       );
     }

@@ -17,7 +17,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { paginateKnowledgePoints } from "@/lib/knowledge/pagination";
 import { DEFAULT_KNOWLEDGE_PUSH_TIMES, MAX_PUSH_TIMES_PER_SUBSCRIPTION } from "@/types";
+
+const KNOWLEDGE_POINTS_PER_PAGE = 20;
 
 interface KnowledgeDetailClientProps {
   bank: {
@@ -46,9 +49,15 @@ export function KnowledgeDetailClient({
   const [pushTimes, setPushTimes] = useState<string[]>(
     subscription?.pushTimes?.length ? subscription.pushTimes : [...DEFAULT_KNOWLEDGE_PUSH_TIMES],
   );
-  const [newTime, setNewTime] = useState("09:00");
+  const [newTime, setNewTime] = useState(DEFAULT_KNOWLEDGE_PUSH_TIMES[0]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pointPage, setPointPage] = useState(1);
+  const paginatedPoints = paginateKnowledgePoints(
+    bank.points,
+    pointPage,
+    KNOWLEDGE_POINTS_PER_PAGE,
+  );
 
   const addTime = () => {
     const val = newTime.trim();
@@ -256,7 +265,7 @@ export function KnowledgeDetailClient({
           <CardTitle className="font-serif">
             知识卡片列表
             <span className="ml-2 text-sm font-normal text-muted-foreground">
-              共 {bank.points.length} 条
+              共 {bank.pointCount} 条
             </span>
           </CardTitle>
         </CardHeader>
@@ -266,14 +275,45 @@ export function KnowledgeDetailClient({
               暂无知识卡片，创建者添加后即可推送
             </p>
           ) : (
-            bank.points.slice(0, 20).map((point, index) => (
-              <div key={point.id} className="rounded-lg border bg-card/80 p-3">
-                <p className="mb-2 text-xs text-muted-foreground">#{index + 1}</p>
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                  {point.content}
-                </pre>
-              </div>
-            ))
+            <>
+              {paginatedPoints.items.map((point) => (
+                <div key={point.id} className="rounded-lg border bg-card/80 p-3">
+                  <p className="mb-2 text-xs text-muted-foreground">#{point.displayIndex}</p>
+                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                    {point.content}
+                  </pre>
+                </div>
+              ))}
+              {paginatedPoints.totalPages > 1 ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    第 {paginatedPoints.page} / {paginatedPoints.totalPages} 页
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPointPage((page) => Math.max(1, page - 1))}
+                      disabled={paginatedPoints.page <= 1}
+                    >
+                      上一页
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPointPage((page) =>
+                          Math.min(paginatedPoints.totalPages, page + 1),
+                        )
+                      }
+                      disabled={paginatedPoints.page >= paginatedPoints.totalPages}
+                    >
+                      下一页
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </CardContent>
       </Card>

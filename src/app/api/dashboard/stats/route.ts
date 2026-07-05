@@ -32,7 +32,8 @@ export async function GET() {
       subscribedCount,
       todayPushed,
       todayTotal,
-      createdBanksCount,
+      createdQuestionBanksCount,
+      createdKnowledgeBanksCount,
     ] = await Promise.all([
       prisma.subscription.count({
         where: { targetType, targetId },
@@ -55,13 +56,18 @@ export async function GET() {
       prisma.questionBank.count({
         where: { creatorId: targetId },
       }),
+      prisma.knowledgeBank.count({
+        where: { creatorId: targetId },
+      }),
     ]);
 
     return NextResponse.json({
       subscribedCount,
       todayPushed,
       todayTotal,
-      createdBanksCount,
+      createdQuestionBanksCount,
+      createdKnowledgeBanksCount,
+      createdBanksCount: createdQuestionBanksCount + createdKnowledgeBanksCount,
     });
   } catch (error) {
     console.error("[GET /api/dashboard/stats]", error);
