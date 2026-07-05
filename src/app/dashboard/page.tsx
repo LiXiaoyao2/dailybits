@@ -7,6 +7,7 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { CreatedContentList } from "@/components/dashboard/created-content-list";
 import { SubscriptionList } from "@/components/dashboard/subscription-list";
 import { KnowledgeSubscriptionList } from "@/components/dashboard/knowledge-subscription-list";
+import { DigestSubscriptionList } from "@/components/dashboard/digest-subscription-list";
 import { PushHistory } from "@/components/dashboard/push-history";
 
 export default function DashboardPage() {
@@ -34,6 +35,7 @@ export default function DashboardPage() {
       <CreatedContentList />
       <SubscriptionList />
       <KnowledgeSubscriptionList />
+      <DigestSubscriptionList />
       <PushHistory />
     </div>
   );
