@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import { canAccessKnowledgeBank } from "@/lib/knowledge/access";
 import { prisma } from "@/lib/prisma";
 import { KnowledgeDetailClient } from "./knowledge-detail-client";
@@ -11,7 +10,7 @@ export default async function KnowledgeBankPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   const bank = await prisma.knowledgeBank.findUnique({
     where: { id },
     include: {

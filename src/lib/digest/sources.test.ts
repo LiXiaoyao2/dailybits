@@ -81,23 +81,30 @@ test("AIHOT news items are rewritten by the digest LLM before rendering", async 
 
   globalThis.fetch = async (input, init) => {
     const url = input instanceof Request ? input.url : String(input);
-    if (url === "https://aihot.test/api/public/daily/2026-05-12") {
+    if (url === "https://aihot.test/api/v1/dailies/2026-05-12") {
       return new Response(
         JSON.stringify({
-          date: "2026-05-12",
-          sections: [
-            {
-              label: "模型发布",
-              items: [
-                {
-                  title: "AIHOT 测试标题",
-                  summary: "AIHOT原始摘要，长度和风格不稳定，需要统一改写后再进入推送表格。",
-                  sourceUrl: "https://example.com/aihot",
-                  sourceName: "AIHOT",
-                },
-              ],
-            },
-          ],
+          schemaVersion: 1,
+          report: {
+            date: "2026-05-12",
+            sections: [
+              {
+                label: "模型发布",
+                items: [
+                  {
+                    title: "AIHOT 测试标题",
+                    summary: "AIHOT原始摘要，长度和风格不稳定，需要统一改写后再进入推送表格。",
+                    source: { name: "AIHOT" },
+                    links: {
+                      aihot: "https://aihot.test/items/test",
+                      original: "https://example.com/aihot",
+                    },
+                  },
+                ],
+              },
+            ],
+            flashes: [],
+          },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
@@ -167,6 +174,107 @@ test("AIHOT news items are rewritten by the digest LLM before rendering", async 
       delete process.env.LLM_MODEL;
     } else {
       process.env.LLM_MODEL = originalLlmModel;
+    }
+  }
+});
+
+test("AIHOT selected mode uses the v1 items endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalProvider = process.env.AI_NEWS_PROVIDER;
+  const originalMode = process.env.AIHOT_DIGEST_MODE;
+  const originalAihotBaseUrl = process.env.AIHOT_API_BASE_URL;
+  const originalItemsWindow = process.env.AIHOT_ITEMS_WINDOW;
+  const originalItemsBy = process.env.AIHOT_ITEMS_BY;
+  const originalLlmApiKey = process.env.LLM_API_KEY;
+  let sawItemsRequest = false;
+
+  process.env.AI_NEWS_PROVIDER = "aihot";
+  process.env.AIHOT_DIGEST_MODE = "selected";
+  process.env.AIHOT_API_BASE_URL = "https://aihot.test";
+  delete process.env.AIHOT_ITEMS_WINDOW;
+  delete process.env.AIHOT_ITEMS_BY;
+  delete process.env.LLM_API_KEY;
+
+  globalThis.fetch = async (input) => {
+    const requestUrl = new URL(input instanceof Request ? input.url : String(input));
+    if (requestUrl.origin === "https://aihot.test" && requestUrl.pathname === "/api/v1/items") {
+      sawItemsRequest = true;
+      assert.equal(requestUrl.searchParams.get("mode"), "selected");
+      assert.equal(requestUrl.searchParams.get("limit"), "2");
+      assert.equal(requestUrl.searchParams.get("window"), "24h");
+      assert.equal(requestUrl.searchParams.get("by"), "timeline");
+      return new Response(
+        JSON.stringify({
+          schemaVersion: 1,
+          query: {
+            mode: "selected",
+            category: null,
+            window: "24h",
+            q: null,
+            by: "timeline",
+            ordering: "timelineDesc",
+          },
+          items: [
+            {
+              id: "item-1",
+              title: "AIHOT v1 精选",
+              summary: "v1 精选摘要会从嵌套 source 和 links 字段读取。",
+              source: { name: "AIHOT" },
+              links: {
+                aihot: "https://aihot.test/items/item-1",
+                original: "https://example.com/original",
+              },
+              publishedAt: "2026-05-12T00:00:00Z",
+              discoveredAt: "2026-05-12T00:05:00Z",
+              category: "ai-models",
+              score: 80,
+              selected: true,
+            },
+          ],
+          page: { count: 1, hasMore: false, nextCursor: null },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    throw new Error(`Unexpected fetch: ${requestUrl}`);
+  };
+
+  try {
+    const pages = await fetchAiNewsDigest(2);
+    assert.equal(sawItemsRequest, true);
+    assert.match(pages[0], /\*\*\[AIHOT v1 精选\]\(https:\/\/example\.com\/original\)\*\*/);
+    assert.match(pages[0], /v1 精选摘要/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalProvider === undefined) {
+      delete process.env.AI_NEWS_PROVIDER;
+    } else {
+      process.env.AI_NEWS_PROVIDER = originalProvider;
+    }
+    if (originalMode === undefined) {
+      delete process.env.AIHOT_DIGEST_MODE;
+    } else {
+      process.env.AIHOT_DIGEST_MODE = originalMode;
+    }
+    if (originalAihotBaseUrl === undefined) {
+      delete process.env.AIHOT_API_BASE_URL;
+    } else {
+      process.env.AIHOT_API_BASE_URL = originalAihotBaseUrl;
+    }
+    if (originalItemsWindow === undefined) {
+      delete process.env.AIHOT_ITEMS_WINDOW;
+    } else {
+      process.env.AIHOT_ITEMS_WINDOW = originalItemsWindow;
+    }
+    if (originalItemsBy === undefined) {
+      delete process.env.AIHOT_ITEMS_BY;
+    } else {
+      process.env.AIHOT_ITEMS_BY = originalItemsBy;
+    }
+    if (originalLlmApiKey === undefined) {
+      delete process.env.LLM_API_KEY;
+    } else {
+      process.env.LLM_API_KEY = originalLlmApiKey;
     }
   }
 });

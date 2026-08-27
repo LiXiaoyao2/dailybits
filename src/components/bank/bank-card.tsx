@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { CalendarClock, CheckCircle2, Clock, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,14 +28,28 @@ import {
   MAX_SUBSCRIPTIONS_PER_TARGET,
   MAX_PUSH_TIMES_PER_SUBSCRIPTION,
   DEFAULT_PUSH_TIMES,
+  type SubscriptionCadence,
+  type SubscriptionScheduleMode,
 } from "@/types";
+import {
+  formatSubscriptionSchedule,
+  isValidPushTime,
+} from "@/lib/subscriptions/schedule";
 
 export interface BankCardProps {
   id: string;
   title: string;
+  description: string | null;
   creator: { id: string; name: string | null; image: string | null; uid?: string | null };
   questionCount: number;
   subscriberCount: number;
+  answerCount?: number;
+  correctAnswerCount?: number;
+  answererCount?: number;
+  subscriptionScheduleMode: SubscriptionScheduleMode;
+  subscriptionCadence: SubscriptionCadence;
+  subscriptionWeekdays: number[];
+  subscriptionPushTimes: string[];
   isLoggedIn?: boolean;
   isSubscribed?: boolean;
   subscriptionCount?: number;
@@ -44,9 +59,17 @@ export interface BankCardProps {
 export function BankCard({
   id,
   title,
+  description,
   creator,
   questionCount,
   subscriberCount,
+  answerCount = 0,
+  correctAnswerCount = 0,
+  answererCount = 0,
+  subscriptionScheduleMode,
+  subscriptionCadence,
+  subscriptionWeekdays,
+  subscriptionPushTimes,
   isLoggedIn = false,
   isSubscribed = false,
   subscriptionCount = 0,
@@ -65,10 +88,19 @@ export function BankCard({
 
   const atSubLimit = subscriptionCount >= MAX_SUBSCRIPTIONS_PER_TARGET;
   const atTimeLimit = pushTimes.length >= MAX_PUSH_TIMES_PER_SUBSCRIPTION;
+  const fixedSchedule = subscriptionScheduleMode === "FIXED";
+  const scheduleSummary = formatSubscriptionSchedule({
+    subscriptionScheduleMode,
+    subscriptionCadence,
+    subscriptionWeekdays,
+    subscriptionPushTimes,
+  });
+  const accuracy =
+    answerCount > 0 ? Math.round((correctAnswerCount / answerCount) * 1000) / 10 : null;
 
   const addTime = () => {
     const val = newTime.trim();
-    if (!val || pushTimes.includes(val)) return;
+    if (!isValidPushTime(val) || pushTimes.includes(val)) return;
     if (atTimeLimit) return;
     setPushTimes((prev) => [...prev, val].sort());
   };
@@ -78,7 +110,7 @@ export function BankCard({
   };
 
   const handleSubscribe = async () => {
-    if (pushTimes.length === 0) {
+    if (!fixedSchedule && pushTimes.length === 0) {
       toast.error("请至少添加一个推送时间");
       return;
     }
@@ -93,7 +125,7 @@ export function BankCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bankId: id,
-          pushTimes,
+          ...(!fixedSchedule ? { pushTimes } : {}),
           endCondition,
           repeatCount: endCondition === "REPEAT_N_TIMES" ? repeatCount : 0,
         }),
@@ -103,7 +135,7 @@ export function BankCard({
         toast.error(data.error ?? "订阅失败");
         return;
       }
-      toast.success("订阅成功！将按设定时间推送题目");
+      toast.success("订阅成功");
       setSubscribed(true);
       setSubCount((c) => c + 1);
       setOpen(false);
@@ -116,27 +148,56 @@ export function BankCard({
 
   return (
     <Card
-      className="paper-rise card-hover flex flex-col"
+      className="paper-rise card-hover flex min-h-[180px] flex-col"
       style={{ animationDelay: `${appearDelayMs}ms` }}
     >
-      <CardHeader className="min-w-0 pb-2">
-        <Link href={`/bank/${id}`} className="block min-w-0 hover:underline">
-          <CardTitle className="truncate font-serif text-lg" title={title}>
-            {title}
-          </CardTitle>
-        </Link>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">
-            创建者：{creator.name ?? "未知"}
-            {creator.uid ? ` (${creator.uid})` : ""}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {questionCount} 题 · {subCount} 人订阅过
-          </p>
+      <CardHeader className="min-w-0 gap-2 pb-2">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <Link href={`/bank/${id}`} className="block min-w-0 hover:underline">
+              <CardTitle className="truncate font-serif text-lg" title={title}>
+                {title}
+              </CardTitle>
+            </Link>
+            <p className="truncate text-xs text-muted-foreground">
+              创建者：{creator.name ?? "未知"}
+              {creator.uid ? ` (${creator.uid})` : ""}
+            </p>
+          </div>
+          {subscribed ? (
+            <Badge className="shrink-0 border-0 bg-success/10 text-success">
+              已订阅
+            </Badge>
+          ) : null}
         </div>
-        <div className="flex items-center gap-2">
+        {description ? (
+          <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <Badge variant="secondary">{questionCount} 题</Badge>
+            <Badge variant="secondary" className="gap-1">
+              <Users className="size-3" aria-hidden />
+              {subCount} 订阅
+            </Badge>
+            <Badge variant="secondary" className="gap-1">
+              <CheckCircle2 className="size-3" aria-hidden />
+              {answererCount} 人答题
+            </Badge>
+            {accuracy !== null ? (
+              <Badge variant="outline">{answerCount} 次 · 正确率 {accuracy}%</Badge>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CalendarClock className="size-3.5 text-primary" />
+            <span className="truncate">{scheduleSummary}</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -151,6 +212,10 @@ export function BankCard({
                 <Badge variant="secondary" className="text-xs text-muted-foreground">
                   订阅数已满 {MAX_SUBSCRIPTIONS_PER_TARGET}/{MAX_SUBSCRIPTIONS_PER_TARGET}
                 </Badge>
+              ) : fixedSchedule ? (
+                <Button size="sm" onClick={handleSubscribe} disabled={loading}>
+                  {loading ? "订阅中..." : "订阅"}
+                </Button>
               ) : (
                 <Dialog open={open} onOpenChange={setOpen}>
                   <DialogTrigger className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground h-7 hover:bg-primary/80 transition-colors">
@@ -231,7 +296,8 @@ export function BankCard({
                               className="cursor-pointer bg-primary/10 text-primary hover:bg-primary/20"
                               onClick={() => removeTime(t)}
                             >
-                              {t} ×
+                              <Clock className="size-3" />
+                              {t} x
                             </Badge>
                           ))}
                         </div>
@@ -252,9 +318,6 @@ export function BankCard({
                 </Dialog>
               )}
             </>
-          )}
-          {subscribed && (
-            <Badge className="bg-success/10 text-success border-0">已订阅</Badge>
           )}
         </div>
       </CardContent>

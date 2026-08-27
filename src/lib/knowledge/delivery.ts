@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../../generated/prisma/client";
 import type { KnowledgePushPayload, TargetType } from "../../types";
+import { pushToTarget } from "../push/adapter";
 
 type KnowledgeSubscriptionForPush = Awaited<
   ReturnType<PrismaClient["knowledgeSubscription"]["findMany"]>
@@ -71,24 +72,7 @@ export async function selectNextKnowledgePoint(
 export async function pushKnowledgeToTarget(
   payload: KnowledgePushPayload,
 ): Promise<boolean> {
-  const url = process.env.PUSH_API_URL;
-  if (!url) {
-    console.log("[PUSH KNOWLEDGE MOCK]", JSON.stringify(payload, null, 2));
-    return true;
-  }
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    console.error(
-      `[Knowledge] Push failed: HTTP ${response.status} ${response.statusText}` +
-        (body ? ` ${body.slice(0, 300)}` : ""),
-    );
-  }
-  return response.ok;
+  return pushToTarget(payload);
 }
 
 export function buildKnowledgePushPayload(input: {
@@ -97,6 +81,7 @@ export function buildKnowledgePushPayload(input: {
   content: string;
   knowledgeBankId: string;
   knowledgePointId: string;
+  idempotencyKey?: string;
 }): KnowledgePushPayload {
   return {
     receiver: input.receiver,
@@ -104,6 +89,7 @@ export function buildKnowledgePushPayload(input: {
     items: [input.content],
     knowledgeBankId: input.knowledgeBankId,
     knowledgePointId: input.knowledgePointId,
+    ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
   };
 }
 
@@ -143,6 +129,14 @@ export async function pushKnowledgeSubscription(
       content: point.content,
       knowledgeBankId: sub.bankId,
       knowledgePointId: point.id,
+      idempotencyKey: [
+        "dailybits",
+        "knowledge",
+        sub.id,
+        pushDate,
+        pushTime,
+        point.id,
+      ].join(":"),
     }),
   );
 

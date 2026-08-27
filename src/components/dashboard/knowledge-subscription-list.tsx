@@ -32,9 +32,12 @@ export function KnowledgeSubscriptionList() {
   }, []);
 
   useEffect(() => {
-    refresh()
-      .catch(() => toast.error("知识卡片订阅加载失败"))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      refresh()
+        .catch(() => toast.error("知识卡片订阅加载失败"))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
   const unsubscribe = async (sub: KnowledgeSubscriptionItem) => {

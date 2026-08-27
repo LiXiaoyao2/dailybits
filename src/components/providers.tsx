@@ -1,7 +1,7 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { GatewaySessionProvider } from "@/lib/client-auth";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  return <GatewaySessionProvider>{children}</GatewaySessionProvider>;
 }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession, getSessionDepartmentKeys } from "@/lib/auth";
 import {
   canAccessKnowledgeBank,
   KNOWLEDGE_VISIBILITY_VALUES,
@@ -28,7 +27,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     const bank = await prisma.knowledgeBank.findUnique({
       where: { id },
       include: {
@@ -45,7 +44,11 @@ export async function GET(
     if (!bank) {
       return NextResponse.json({ error: "Knowledge bank not found" }, { status: 404 });
     }
-    const access = await canAccessKnowledgeBank(bank, session?.user?.id);
+    const access = await canAccessKnowledgeBank(
+      bank,
+      session?.user?.id,
+      await getSessionDepartmentKeys(session),
+    );
     if (!access) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -90,7 +93,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -182,7 +185,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

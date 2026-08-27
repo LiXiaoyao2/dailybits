@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession, getSessionDepartmentKeys } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getUserDepartments } from "@/lib/getUserDepartments";
+import { parseQuestionBankSchedule } from "@/lib/subscriptions/schedule";
 import type { Prisma } from "@/generated/prisma/client";
 
 const PAGE_SIZE = 12;
@@ -13,7 +12,14 @@ type VisibilityValue = (typeof VISIBILITY_VALUES)[number];
 function parseVisibilityBody(body: {
   visibility?: unknown;
   visibleDepartments?: unknown;
-}): { visibility: VisibilityValue; visibleDepartments: string[] } | Response {
+  visibleDepartmentNames?: unknown;
+}):
+  | {
+      visibility: VisibilityValue;
+      visibleDepartments: string[];
+      visibleDepartmentNames: string[];
+    }
+  | Response {
   let visibility: VisibilityValue = "PRIVATE";
   if (body.visibility !== undefined) {
     if (
@@ -43,8 +49,38 @@ function parseVisibilityBody(body: {
           { status: 400 }
         );
       }
-      visibleDepartments.push(d.trim());
+      const department = d.trim();
+      if (!visibleDepartments.includes(department)) {
+        visibleDepartments.push(department);
+      }
     }
+  }
+
+  let visibleDepartmentNames = [...visibleDepartments];
+  if (body.visibleDepartmentNames !== undefined) {
+    if (!Array.isArray(body.visibleDepartmentNames)) {
+      return NextResponse.json(
+        { error: "visibleDepartmentNames must be an array of strings" },
+        { status: 400 }
+      );
+    }
+    const names: string[] = [];
+    for (const item of body.visibleDepartmentNames) {
+      if (typeof item !== "string" || item.trim() === "") {
+        return NextResponse.json(
+          { error: "visibleDepartmentNames must be non-empty strings" },
+          { status: 400 }
+        );
+      }
+      names.push(item.trim());
+    }
+    if (names.length !== visibleDepartments.length) {
+      return NextResponse.json(
+        { error: "visibleDepartmentNames must align with visibleDepartments" },
+        { status: 400 }
+      );
+    }
+    visibleDepartmentNames = names;
   }
 
   if (visibility === "PARTIAL" && visibleDepartments.length === 0) {
@@ -57,7 +93,7 @@ function parseVisibilityBody(body: {
     );
   }
 
-  return { visibility, visibleDepartments };
+  return { visibility, visibleDepartments, visibleDepartmentNames };
 }
 
 export async function GET(request: NextRequest) {
@@ -81,7 +117,7 @@ export async function GET(request: NextRequest) {
     const targetType = (searchParams.get("targetType") ?? "USER") as "USER" | "GROUP";
     const targetIdParam = searchParams.get("targetId");
 
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
 
     let visibilityWhere: Prisma.QuestionBankWhereInput;
     if (ownerIsMine) {
@@ -95,11 +131,7 @@ export async function GET(request: NextRequest) {
     } else if (!session?.user?.id) {
       visibilityWhere = { visibility: "PUBLIC" };
     } else {
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { uid: true },
-      });
-      const userDepartments = await getUserDepartments(user?.uid);
+      const userDepartments = await getSessionDepartmentKeys(session);
 
       const visibilityOr: Prisma.QuestionBankWhereInput[] = [
         { visibility: "PUBLIC" },
@@ -171,11 +203,48 @@ export async function GET(request: NextRequest) {
       : 0;
 
     const totalPages = Math.ceil(total / PAGE_SIZE);
+    const bankIds = banks.map((bank) => bank.id);
+    const [answerTotals, correctAnswerTotals, uniqueAnswerers] =
+      bankIds.length > 0
+        ? await Promise.all([
+            prisma.questionAnswerEvent.groupBy({
+              by: ["bankId"],
+              where: { bankId: { in: bankIds } },
+              _count: { _all: true },
+            }),
+            prisma.questionAnswerEvent.groupBy({
+              by: ["bankId"],
+              where: { bankId: { in: bankIds }, isCorrect: true },
+              _count: { _all: true },
+            }),
+            prisma.questionAnswerEvent.findMany({
+              where: { bankId: { in: bankIds } },
+              select: { bankId: true, respondentId: true },
+              distinct: ["bankId", "respondentId"],
+            }),
+          ])
+        : [[], [], []] as const;
+    const answerCountByBank = new Map(
+      answerTotals.map((item) => [item.bankId, item._count._all]),
+    );
+    const correctAnswerCountByBank = new Map(
+      correctAnswerTotals.map((item) => [item.bankId, item._count._all]),
+    );
+    const answererCountByBank = new Map<string, number>();
+    for (const item of uniqueAnswerers) {
+      answererCountByBank.set(
+        item.bankId,
+        (answererCountByBank.get(item.bankId) ?? 0) + 1,
+      );
+    }
 
     return NextResponse.json({
       banks: banks.map((b) => ({
         ...b,
         isSubscribed: subscribedBankIds.has(b.id),
+        answerCount: answerCountByBank.get(b.id) ?? 0,
+        correctAnswerCount: correctAnswerCountByBank.get(b.id) ?? 0,
+        answererCount: answererCountByBank.get(b.id) ?? 0,
       })),
       total,
       page,
@@ -194,7 +263,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -214,7 +283,12 @@ export async function POST(request: NextRequest) {
 
     const parsed = parseVisibilityBody(body);
     if (parsed instanceof Response) return parsed;
-    const { visibility, visibleDepartments } = parsed;
+    const { visibility, visibleDepartments, visibleDepartmentNames } = parsed;
+
+    const schedule = parseQuestionBankSchedule(body);
+    if (!schedule.ok) {
+      return NextResponse.json({ error: schedule.error }, { status: 400 });
+    }
 
     const bank = await prisma.questionBank.create({
       data: {
@@ -226,6 +300,8 @@ export async function POST(request: NextRequest) {
         creatorId: session.user.id,
         visibility,
         visibleDepartments,
+        visibleDepartmentNames,
+        ...schedule.value,
       },
       include: {
         creator: {

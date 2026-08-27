@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client";
 import type { DigestPushPayload, DigestType, TargetType } from "../../types";
+import { pushToTarget } from "../push/adapter";
 import { isDeliverableDigestType } from "./options";
 import { fetchDigestItems, getAiNewsDigestCacheDate, getDigestItemLimit } from "./sources";
 
@@ -30,17 +31,7 @@ export async function resolveDigestReceiver(
 }
 
 export async function pushDigestToTarget(payload: DigestPushPayload): Promise<boolean> {
-  const url = process.env.PUSH_API_URL;
-  if (!url) {
-    console.log("[PUSH DIGEST MOCK]", JSON.stringify(payload, null, 2));
-    return true;
-  }
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return response.ok;
+  return pushToTarget(payload);
 }
 
 export function buildDigestPushLogKey(input: {
@@ -277,6 +268,15 @@ export async function runDueDigestSubscriptions(
         items,
         digestType,
         digestDate: contentDate,
+        idempotencyKey: [
+          "dailybits",
+          "digest",
+          sub.targetType,
+          sub.targetId,
+          digestType,
+          scheduleDate,
+          currentTime,
+        ].join(":"),
       });
 
       if (success) {

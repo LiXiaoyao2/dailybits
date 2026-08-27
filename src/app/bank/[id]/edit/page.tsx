@@ -7,7 +7,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { QuestionForm } from "@/components/question/question-form";
 import { QuestionList } from "@/components/question/question-list";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,10 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/client-auth";
 import { toast } from "sonner";
-import { FileJson2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { CalendarClock, FileJson2, ShieldCheck } from "lucide-react";
+import {
+  DepartmentSelector,
+  type SelectedDepartment,
+} from "@/components/bank/department-selector";
+import {
+  SubscriptionScheduleForm,
+  defaultScheduleDraft,
+  type ScheduleDraft,
+} from "@/components/bank/subscription-schedule-form";
 
 const ACCEPT_EXCEL = ".xlsx,.csv";
 
@@ -28,8 +35,8 @@ type BankVisibility = "PRIVATE" | "PUBLIC" | "PARTIAL";
 
 const VISIBILITY_LABELS: Record<BankVisibility, string> = {
   PRIVATE: "仅自己可见",
-  PUBLIC: "公开",
-  PARTIAL: "部分可见",
+  PUBLIC: "全部员工可见",
+  PARTIAL: "指定部门可见",
 };
 
 const JSON_IMPORT_EXAMPLE = `[
@@ -411,20 +418,39 @@ export default function EditBankPage({
     creatorId: string;
     visibility: BankVisibility;
     visibleDepartments: string[];
+    visibleDepartmentNames: string[];
+    subscriptionScheduleMode: "CUSTOM" | "FIXED";
+    subscriptionCadence: "DAILY" | "WEEKLY";
+    subscriptionWeekdays: number[];
+    subscriptionPushTimes: string[];
   } | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [listRefreshKey, setListRefreshKey] = React.useState(0);
   const [activeTab, setActiveTab] = React.useState("manual");
   const [editVisibility, setEditVisibility] = React.useState<BankVisibility>("PRIVATE");
-  const [editDepartments, setEditDepartments] = React.useState<string[]>([]);
-  const [deptDraft, setDeptDraft] = React.useState("");
+  const [editDepartments, setEditDepartments] = React.useState<SelectedDepartment[]>([]);
+  const [editSchedule, setEditSchedule] = React.useState<ScheduleDraft>(defaultScheduleDraft);
+  const [newScheduleTime, setNewScheduleTime] = React.useState("09:30");
   const [savingVisibility, setSavingVisibility] = React.useState(false);
 
   React.useEffect(() => {
-    if (bank) {
+    if (!bank) return;
+    const timer = window.setTimeout(() => {
       setEditVisibility(bank.visibility);
-      setEditDepartments([...bank.visibleDepartments]);
-    }
+      setEditDepartments(
+        bank.visibleDepartments.map((id, index) => ({
+          id,
+          name: bank.visibleDepartmentNames[index] || id,
+        })),
+      );
+      setEditSchedule({
+        subscriptionScheduleMode: bank.subscriptionScheduleMode,
+        subscriptionCadence: bank.subscriptionCadence,
+        subscriptionWeekdays: bank.subscriptionWeekdays,
+        subscriptionPushTimes: bank.subscriptionPushTimes,
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [bank]);
 
   const handleGenerateSuccess = () => {
@@ -467,7 +493,10 @@ export default function EditBankPage({
         body: JSON.stringify({
           visibility: editVisibility,
           visibleDepartments:
-            editVisibility === "PARTIAL" ? editDepartments : [],
+            editVisibility === "PARTIAL" ? editDepartments.map((item) => item.id) : [],
+          visibleDepartmentNames:
+            editVisibility === "PARTIAL" ? editDepartments.map((item) => item.name) : [],
+          ...editSchedule,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -483,7 +512,20 @@ export default function EditBankPage({
               visibility: data.visibility ?? editVisibility,
               visibleDepartments: Array.isArray(data.visibleDepartments)
                 ? data.visibleDepartments
-                : editDepartments,
+                : editDepartments.map((item) => item.id),
+              visibleDepartmentNames: Array.isArray(data.visibleDepartmentNames)
+                ? data.visibleDepartmentNames
+                : editDepartments.map((item) => item.name),
+              subscriptionScheduleMode:
+                data.subscriptionScheduleMode ?? editSchedule.subscriptionScheduleMode,
+              subscriptionCadence:
+                data.subscriptionCadence ?? editSchedule.subscriptionCadence,
+              subscriptionWeekdays: Array.isArray(data.subscriptionWeekdays)
+                ? data.subscriptionWeekdays
+                : editSchedule.subscriptionWeekdays,
+              subscriptionPushTimes: Array.isArray(data.subscriptionPushTimes)
+                ? data.subscriptionPushTimes
+                : editSchedule.subscriptionPushTimes,
             }
           : prev
       );
@@ -543,84 +585,79 @@ export default function EditBankPage({
         </TabsList>
         <TabsContent value="settings" className="mt-6">
           {isCreator ? (
-            <div className="mx-auto max-w-lg space-y-6 font-serif">
-              <div className="space-y-2">
-                <Label>可见范围</Label>
-                <Select
-                  value={editVisibility}
-                  onValueChange={(v) => setEditVisibility(v as BankVisibility)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="仅自己可见">
-                      {VISIBILITY_LABELS[editVisibility]}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PRIVATE">仅自己可见</SelectItem>
-                    <SelectItem value="PUBLIC">公开</SelectItem>
-                    <SelectItem value="PARTIAL">部分可见</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {editVisibility === "PARTIAL" && (
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    指定可访问的部门名称（需与用户侧部门匹配）
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={deptDraft}
-                      onChange={(e) => setDeptDraft(e.target.value)}
-                      placeholder="部门名称"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const v = deptDraft.trim();
-                          if (v && !editDepartments.includes(v)) {
-                            setEditDepartments((d) => [...d, v]);
-                            setDeptDraft("");
-                          }
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        const v = deptDraft.trim();
-                        if (!v) return;
-                        if (editDepartments.includes(v)) {
-                          toast.error("该部门已添加");
-                          return;
-                        }
-                        setEditDepartments((d) => [...d, v]);
-                        setDeptDraft("");
-                      }}
-                    >
-                      添加
-                    </Button>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm">
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-primary" />
+                    <h2 className="text-base font-semibold">访问范围</h2>
                   </div>
-                  {editDepartments.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {editDepartments.map((d) => (
-                        <Badge
-                          key={d}
-                          variant="secondary"
-                          className="cursor-pointer font-normal"
-                          onClick={() =>
-                            setEditDepartments((prev) => prev.filter((x) => x !== d))
-                          }
-                        >
-                          {d} ×
-                        </Badge>
-                      ))}
+                  <div className="space-y-2">
+                    <Label>可见范围</Label>
+                    <Select
+                      value={editVisibility}
+                      onValueChange={(v) => setEditVisibility(v as BankVisibility)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="仅自己可见">
+                          {VISIBILITY_LABELS[editVisibility]}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PRIVATE">仅自己可见</SelectItem>
+                        <SelectItem value="PUBLIC">全部员工可见</SelectItem>
+                        <SelectItem value="PARTIAL">指定部门可见</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {editVisibility === "PARTIAL" ? (
+                    <DepartmentSelector
+                      value={editDepartments}
+                      onChange={setEditDepartments}
+                      disabled={savingVisibility}
+                    />
+                  ) : null}
+                </section>
+
+                <section className="space-y-4 border-t border-border pt-5">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="size-4 text-primary" />
+                    <h2 className="text-base font-semibold">订阅节奏</h2>
+                  </div>
+                  <SubscriptionScheduleForm
+                    value={editSchedule}
+                    onChange={setEditSchedule}
+                    newTime={newScheduleTime}
+                    onNewTimeChange={setNewScheduleTime}
+                    disabled={savingVisibility}
+                  />
+                </section>
+
+                <Button onClick={saveVisibility} disabled={savingVisibility}>
+                  {savingVisibility ? "保存中..." : "保存设置"}
+                </Button>
+              </div>
+
+              <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+                  <p className="text-sm font-semibold text-foreground">当前发布策略</p>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    <div className="rounded-md bg-muted/50 px-3 py-2">
+                      {VISIBILITY_LABELS[editVisibility]}
                     </div>
-                  )}
+                    <div className="rounded-md bg-muted/50 px-3 py-2">
+                      {editVisibility === "PARTIAL"
+                        ? editDepartments.map((item) => item.name).join("、") || "未选择部门"
+                        : "无需部门限制"}
+                    </div>
+                    <div className="rounded-md bg-muted/50 px-3 py-2">
+                      {editSchedule.subscriptionScheduleMode === "CUSTOM"
+                        ? "订阅者自定义时间"
+                        : `${editSchedule.subscriptionCadence === "DAILY" ? "每天" : "每周"} · ${editSchedule.subscriptionPushTimes.join("、")}`}
+                    </div>
+                  </div>
                 </div>
-              )}
-              <Button onClick={saveVisibility} disabled={savingVisibility}>
-                {savingVisibility ? "保存中…" : "保存可见范围"}
-              </Button>
+              </aside>
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">仅题库创建者可修改设置</p>

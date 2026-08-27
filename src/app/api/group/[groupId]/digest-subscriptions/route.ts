@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import {
   SUBSCRIBABLE_DIGEST_TYPES,
   isSubscribableDigestType,
@@ -97,7 +96,7 @@ export async function POST(
   context: { params: Promise<{ groupId: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

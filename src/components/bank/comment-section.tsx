@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/client-auth";
 import { Heart, MessageCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -101,8 +101,11 @@ export function CommentSection({ bankId, canModerate = false }: CommentSectionPr
   );
 
   useEffect(() => {
-    setComments([]);
-    fetchTopLevel(1, true);
+    const timer = window.setTimeout(() => {
+      setComments([]);
+      void fetchTopLevel(1, true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [bankId, sort, fetchTopLevel]);
 
   const handlePostTop = async () => {

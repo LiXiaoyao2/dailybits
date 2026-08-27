@@ -91,7 +91,7 @@ export function KnowledgeExplorer({
               setSearch(event.target.value);
               setPage(1);
             }}
-            className="h-10 rounded-xl border-border/80 bg-card pl-10 pr-3 shadow-[0_3px_10px_rgba(44,48,54,0.05)] focus-visible:ring-primary/25"
+            className="h-10 rounded-md border-border/80 bg-card pl-10 pr-3 shadow-none focus-visible:ring-primary/20"
           />
         </div>
         {data?.isLoggedIn && showCreate ? (
@@ -110,9 +110,9 @@ export function KnowledgeExplorer({
         <SkeletonCardGrid />
       ) : data?.banks.length ? (
         <>
-          <div className="grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {data.banks.map((bank, index) => (
-              <div key={bank.id} className="w-full max-w-sm">
+              <div key={bank.id} className="w-full">
                 <KnowledgeCard
                   id={bank.id}
                   title={bank.title}

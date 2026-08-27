@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Search } from "lucide-react";
+import { CalendarClock, Search } from "lucide-react";
+import { formatSubscriptionSchedule } from "@/lib/subscriptions/schedule";
 import {
   DEFAULT_PUSH_TIMES,
   MAX_PUSH_TIMES_PER_SUBSCRIPTION,
@@ -16,6 +17,10 @@ interface Bank {
   id: string;
   title: string;
   subscriberCount: number;
+  subscriptionScheduleMode: "CUSTOM" | "FIXED";
+  subscriptionCadence: "DAILY" | "WEEKLY";
+  subscriptionWeekdays: number[];
+  subscriptionPushTimes: string[];
   _count: { questions: number };
   isSubscribed?: boolean;
 }
@@ -39,8 +44,10 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
 
   useEffect(() => {
     if (search === debouncedSearch) return;
-    setLoading(true);
-    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    const t = setTimeout(() => {
+      setLoading(true);
+      setDebouncedSearch(search);
+    }, 300);
     return () => clearTimeout(t);
   }, [search, debouncedSearch]);
 
@@ -66,10 +73,15 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
   }, [debouncedSearch, groupId]);
 
   useEffect(() => {
-    fetchBanks();
+    const timer = window.setTimeout(() => {
+      fetchBanks();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [fetchBanks]);
 
   const atTimeLimit = pushTimes.length >= MAX_PUSH_TIMES_PER_SUBSCRIPTION;
+  const selectedUsesFixedSchedule =
+    selectedBank?.subscriptionScheduleMode === "FIXED";
 
   const addTime = () => {
     const val = newTime.trim();
@@ -91,7 +103,7 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
 
   const handleSubscribe = async () => {
     if (!selectedBank) return;
-    if (pushTimes.length === 0) {
+    if (!selectedUsesFixedSchedule && pushTimes.length === 0) {
       toast.error("请至少添加一个推送时间");
       return;
     }
@@ -102,7 +114,7 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bankId: selectedBank.id,
-          pushTimes,
+          ...(!selectedUsesFixedSchedule ? { pushTimes } : {}),
         }),
       });
       if (!res.ok) {
@@ -130,6 +142,10 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
               <p className="text-xs text-muted-foreground">
                 {selectedBank._count.questions} 题 · {selectedBank.subscriberCount} 人订阅
               </p>
+              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                <CalendarClock className="size-3" />
+                {formatSubscriptionSchedule(selectedBank)}
+              </p>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setSelectedBank(null)}>
               更换
@@ -137,50 +153,58 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>推送时间</Label>
-          <p className="text-xs text-muted-foreground">
-            设定每日推送时间点（最多 {MAX_PUSH_TIMES_PER_SUBSCRIPTION} 个）
-          </p>
-          <div className="flex gap-2">
-            <Input
-              type="time"
-              value={newTime}
-              onChange={(e) => setNewTime(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={addTime}
-              disabled={atTimeLimit}
-            >
-              添加
-            </Button>
-          </div>
-          {atTimeLimit && (
-            <p className="text-xs text-amber-600">
-              已达上限 {MAX_PUSH_TIMES_PER_SUBSCRIPTION}/{MAX_PUSH_TIMES_PER_SUBSCRIPTION}
-            </p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {pushTimes.map((t) => (
-              <Badge
-                key={t}
-                className="cursor-pointer bg-primary/10 text-primary hover:bg-primary/20"
-                onClick={() => removeTime(t)}
-              >
-                {t} ×
-              </Badge>
-            ))}
-          </div>
-          {pushTimes.length === 0 && (
+        {!selectedUsesFixedSchedule && (
+          <div className="space-y-2">
+            <Label>推送时间</Label>
             <p className="text-xs text-muted-foreground">
-              点击「添加」设定推送时间
+              设定每日推送时间点（最多 {MAX_PUSH_TIMES_PER_SUBSCRIPTION} 个）
             </p>
-          )}
-        </div>
+            <div className="flex gap-2">
+              <Input
+                type="time"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={addTime}
+                disabled={atTimeLimit}
+              >
+                添加
+              </Button>
+            </div>
+            {atTimeLimit && (
+              <p className="text-xs text-amber-600">
+                已达上限 {MAX_PUSH_TIMES_PER_SUBSCRIPTION}/{MAX_PUSH_TIMES_PER_SUBSCRIPTION}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {pushTimes.map((t) => (
+                <Badge
+                  key={t}
+                  className="cursor-pointer bg-primary/10 text-primary hover:bg-primary/20"
+                  onClick={() => removeTime(t)}
+                >
+                  {t} x
+                </Badge>
+              ))}
+            </div>
+            {pushTimes.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                点击「添加」设定推送时间
+              </p>
+            )}
+          </div>
+        )}
+
+        {selectedUsesFixedSchedule && (
+          <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            按题库固定节奏推送：{formatSubscriptionSchedule(selectedBank)}
+          </div>
+        )}
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setSelectedBank(null)} disabled={subscribing}>
@@ -229,6 +253,10 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
                 <p className="text-sm font-medium">{bank.title}</p>
                 <p className="text-xs text-muted-foreground">
                   {bank._count.questions} 题 · {bank.subscriberCount} 人订阅
+                </p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <CalendarClock className="size-3" />
+                  {formatSubscriptionSchedule(bank)}
                 </p>
               </div>
               {bank.isSubscribed ? (

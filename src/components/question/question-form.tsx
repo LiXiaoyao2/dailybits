@@ -51,17 +51,20 @@ export function QuestionForm({
   const [submitting, setSubmitting] = React.useState(false);
 
   React.useEffect(() => {
-    if (editingQuestion) {
-      setContent(editingQuestion.content);
-      setOptions(editingQuestion.options ?? { A: "", B: "", C: "", D: "" });
-      setCorrectAnswer(editingQuestion.correctAnswer ?? "A");
-      setExplanation(editingQuestion.explanation ?? "");
-    } else {
-      setContent("");
-      setOptions({ A: "", B: "", C: "", D: "" });
-      setCorrectAnswer("A");
-      setExplanation("");
-    }
+    const timer = window.setTimeout(() => {
+      if (editingQuestion) {
+        setContent(editingQuestion.content);
+        setOptions(editingQuestion.options ?? { A: "", B: "", C: "", D: "" });
+        setCorrectAnswer(editingQuestion.correctAnswer ?? "A");
+        setExplanation(editingQuestion.explanation ?? "");
+      } else {
+        setContent("");
+        setOptions({ A: "", B: "", C: "", D: "" });
+        setCorrectAnswer("A");
+        setExplanation("");
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [editingQuestion]);
 
   const handleSubmit = async (e: React.FormEvent) => {

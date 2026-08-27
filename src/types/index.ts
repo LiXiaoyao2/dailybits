@@ -1,18 +1,7 @@
-import "next-auth";
-
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-    };
-  }
-}
-
 export type TargetType = "USER" | "GROUP";
 export type DigestType = "GITHUB_TRENDING" | "AI_NEWS" | "ARXIV_AI_PAPERS";
+export type SubscriptionScheduleMode = "CUSTOM" | "FIXED";
+export type SubscriptionCadence = "DAILY" | "WEEKLY";
 
 export const MAX_SUBSCRIPTIONS_PER_TARGET = 5;
 export const MAX_DIGEST_SUBSCRIPTIONS_PER_TARGET = 3;
@@ -40,6 +29,11 @@ export interface PushPayload {
   options: string[];
   correctAnswer: string;
   explanation: string;
+  authorId?: string;
+  businessId?: string;
+  domain?: string;
+  scene?: string;
+  idempotencyKey?: string;
 }
 
 export interface DigestPushPayload {
@@ -48,6 +42,7 @@ export interface DigestPushPayload {
   items: string[];
   digestType: DigestType;
   digestDate: string;
+  idempotencyKey?: string;
 }
 
 export interface KnowledgePushPayload {
@@ -56,4 +51,5 @@ export interface KnowledgePushPayload {
   items: string[];
   knowledgeBankId: string;
   knowledgePointId: string;
+  idempotencyKey?: string;
 }

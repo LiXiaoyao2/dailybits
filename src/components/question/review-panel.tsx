@@ -86,16 +86,21 @@ export function ReviewPanel({ bankId, onComplete }: ReviewPanelProps) {
   }, [bankId]);
 
   React.useEffect(() => {
-    fetchDrafts();
+    const timer = window.setTimeout(() => {
+      fetchDrafts();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [fetchDrafts]);
 
   React.useEffect(() => {
-    if (current) {
+    if (!current) return;
+    const timer = window.setTimeout(() => {
       setContent(current.content);
       setOptions(toOptionsRecord(current.options));
       setCorrectAnswer(current.correctAnswer ?? "A");
       setExplanation(current.explanation ?? "");
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [current]);
 
   const saveAndNext = async (action: "publish" | "skip" | "delete") => {

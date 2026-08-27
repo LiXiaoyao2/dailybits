@@ -13,8 +13,16 @@ interface SubscriptionItem {
   id: string;
   bankId: string;
   pushTimes: string[];
+  effectivePushTimes?: string[];
   isActive: boolean;
-  bank: { id: string; title: string };
+  bank: {
+    id: string;
+    title: string;
+    subscriptionScheduleMode?: "CUSTOM" | "FIXED";
+    subscriptionCadence?: "DAILY" | "WEEKLY";
+    subscriptionWeekdays?: number[];
+    subscriptionPushTimes?: string[];
+  };
   questionCount: number;
   pushedCount: number;
 }
@@ -33,9 +41,12 @@ export function SubscriptionList() {
   }, []);
 
   useEffect(() => {
-    refresh()
-      .catch(() => toast.error("订阅列表加载失败"))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      refresh()
+        .catch(() => toast.error("订阅列表加载失败"))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
   const unsubscribe = async (sub: SubscriptionItem) => {
@@ -99,6 +110,10 @@ export function SubscriptionList() {
           const total = sub.questionCount;
           const pushed = sub.pushedCount;
           const pct = total > 0 ? Math.min(100, (pushed / total) * 100) : 0;
+          const displayTimes = sub.effectivePushTimes?.length
+            ? sub.effectivePushTimes
+            : sub.pushTimes;
+          const fixed = sub.bank.subscriptionScheduleMode === "FIXED";
 
           return (
             <Card
@@ -112,11 +127,12 @@ export function SubscriptionList() {
                     {sub.bank.title}
                   </CardTitle>
                   <div className="flex flex-wrap gap-1.5">
-                    {sub.pushTimes.map((t) => (
+                    {displayTimes.map((t) => (
                       <Badge key={t} variant="secondary">
                         {t}
                       </Badge>
                     ))}
+                    {fixed ? <Badge variant="outline">创建者固定</Badge> : null}
                   </div>
                   <div className="space-y-1">
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -137,7 +153,7 @@ export function SubscriptionList() {
                     render={<Link href={`/bank/${sub.bankId}`} />}
                     nativeButton={false}
                   >
-                    编辑时间
+                    管理订阅
                   </Button>
                   <Button
                     variant="destructive"

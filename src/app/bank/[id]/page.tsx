@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { BankDetailClient } from "./bank-detail-client";
 import { SubscriptionPanel } from "@/components/bank/subscription-panel";
@@ -11,7 +10,7 @@ interface PageProps {
 
 export default async function BankDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
 
   const bank = await prisma.questionBank.findUnique({
     where: { id },
@@ -71,7 +70,7 @@ export default async function BankDetailPage({ params }: PageProps) {
         distinct: ["questionId"],
       }),
     ]);
-    if (sub) {
+    if (sub?.isActive) {
       initialSubscription = {
         id: sub.id,
         pushTimes: sub.pushTimes,
@@ -92,6 +91,10 @@ export default async function BankDetailPage({ params }: PageProps) {
           description: bank.description,
           creatorId: bank.creatorId,
           subscriberCount: bank.subscriberCount,
+          subscriptionScheduleMode: bank.subscriptionScheduleMode,
+          subscriptionCadence: bank.subscriptionCadence,
+          subscriptionWeekdays: bank.subscriptionWeekdays,
+          subscriptionPushTimes: bank.subscriptionPushTimes,
           creator: bank.creator,
           questions: bank.questions,
           questionCount: bank._count.questions,
@@ -101,6 +104,12 @@ export default async function BankDetailPage({ params }: PageProps) {
           session?.user?.id ? (
             <SubscriptionPanel
               bankId={bank.id}
+              bankSchedule={{
+                subscriptionScheduleMode: bank.subscriptionScheduleMode,
+                subscriptionCadence: bank.subscriptionCadence,
+                subscriptionWeekdays: bank.subscriptionWeekdays,
+                subscriptionPushTimes: bank.subscriptionPushTimes,
+              }}
               initialSubscription={initialSubscription}
               totalQuestions={bank._count.questions}
               pushedCount={pushedCount}

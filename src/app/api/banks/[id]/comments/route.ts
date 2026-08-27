@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -114,7 +113,7 @@ export async function GET(
           }),
     ]);
 
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     const userId = session?.user?.id;
 
     const ids = rows.map((c) => c.id);
@@ -179,7 +178,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

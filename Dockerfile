@@ -2,6 +2,9 @@ FROM node:20-bookworm-slim
 
 WORKDIR /app
 
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ENV npm_config_registry=${NPM_REGISTRY}
+
 # Install dependencies first for better layer caching.
 COPY package.json package-lock.json ./
 RUN npm ci

@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { startLogin, useSession } from "@/lib/client-auth";
 import type { ComponentType } from "react";
 import {
   Bell,
@@ -172,20 +171,23 @@ export function DigestSubscriptionList({
 
   useEffect(() => {
     if (status === "loading") return;
-    if (targetType === "USER" && status === "unauthenticated") {
-      fetch("/api/digest-subscriptions")
-        .then((res) => res.json())
-        .then((data) => {
-          const counts = parseSubscriberCounts(data);
-          if (counts) setSubscriberCounts(counts);
-        })
-        .catch(() => undefined)
+    const timer = window.setTimeout(() => {
+      if (targetType === "USER" && status === "unauthenticated") {
+        fetch("/api/digest-subscriptions")
+          .then((res) => res.json())
+          .then((data) => {
+            const counts = parseSubscriberCounts(data);
+            if (counts) setSubscriberCounts(counts);
+          })
+          .catch(() => undefined)
+          .finally(() => setLoading(false));
+        return;
+      }
+      refresh()
+        .catch(() => toast.error("摘要订阅加载失败"))
         .finally(() => setLoading(false));
-      return;
-    }
-    refresh()
-      .catch(() => toast.error("摘要订阅加载失败"))
-      .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [status, refresh, targetType]);
 
   const subscribe = async (option: DigestOption) => {
@@ -351,8 +353,7 @@ export function DigestSubscriptionList({
                     className="w-full"
                     size="sm"
                     variant="outline"
-                    render={<Link href="/login?callbackUrl=/" />}
-                    nativeButton={false}
+                    onClick={startLogin}
                   >
                     登录后订阅
                   </Button>

@@ -9,11 +9,13 @@ DailyBits 是一个面向碎片化学习场景的知识推送平台，支持题�
 ## 核心能力
 
 - 题库管理：创建、编辑、删除与发布题目，支持可见性控制（私有 / 公开 / 部门可见）
+- 部门范围：按 Directory v1 部门搜索保存稳定部门 ID，并保留展示名用于界面回显
 - 多源录入：手动输入、JSON 批量导入、文本生成、文件导入、URL 解析
 - AI 抽象层：通过环境变量切换模型服务，生成后支持预览再发布
-- 定时推送：支持一个订阅配置多个推送时间点，推送完成自动结束或循环推送
+- 定时推送：题库创建者可固定每日 / 每周推送时间，也可允许订阅者自定义多个时间点
 - 智能选题：优先未推送题目，推送完支持自动结束订阅或循环 N 次
-- 数据看板：订阅、推送与学习统计
+- 数据看板：订阅、推送、创建内容、答题人数与正确率统计
+- 管理员总览：题库总数、题目总量、答题趋势与使用量排行
 - 评论系统：题库评论与回复、点赞，支持最新 / 最热排序
 - 群组订阅：支持群组看板和订阅管理，标识操作人身份
 - 批量操作：批量删除题目、复制题目 JSON、JSON 批量导入
@@ -22,7 +24,7 @@ DailyBits 是一个面向碎片化学习场景的知识推送平台，支持题�
 
 - Next.js (App Router) + TypeScript
 - Tailwind CSS + shadcn/ui
-- NextAuth（GitHub OAuth + 可选自定义 OAuth）
+- Auth Hub 网关统一认证
 - Prisma + PostgreSQL
 - node-cron（独立调度进程）
 - OpenAI / 兼容模型服务
@@ -57,7 +59,6 @@ learn/
 │   │   ├── question/         # 题目列表（批量删除、复制 JSON）
 │   │   └── group/            # 群组看板组件
 │   ├── lib/                  # 认证、推送、LLM、解析等核心逻辑
-│   ├── middleware.ts          # 默认登录重定向
 │   └── scheduler/            # 定时调度入口（含结束条件逻辑）
 ├── .env.example
 ├── LICENSE
@@ -82,24 +83,42 @@ cp .env.example .env
 
 ```bash
 DATABASE_URL=""
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET=""
-GITHUB_ID=""
-GITHUB_SECRET=""
-CUSTOM_OAUTH_CLIENT_ID=""
-CUSTOM_OAUTH_CLIENT_SECRET=""
-CUSTOM_OAUTH_AUTH_URL=""
-CUSTOM_OAUTH_TOKEN_URL=""
-CUSTOM_OAUTH_USERINFO_URL=""
-CUSTOM_OAUTH_SCOPE=""
+AUTH_MODE="dev"
+DEV_USER_ID="local-admin"
+DEV_USER_UID="local-admin"
+DEV_USER_NAME="Local Admin"
+DEV_USER_EMAIL="local-admin@example.test"
+DEV_USER_DEPARTMENT="本地开发"
 LLM_PROVIDER="openai"
 LLM_API_KEY=""
 LLM_API_BASE_URL=""
 LLM_MODEL="gpt-4o-mini"
+PUSH_PROVIDER="generic"
 PUSH_API_URL=""
+INNER_API_BASE_URL="http://127.0.0.1:4010"
+INNER_API_KEY=""
+INNER_API_KEY_HEADER="X-Inner-API-Key"
+MESSAGING_API_BASE_URL=""
+MESSAGING_INNER_API_KEY=""
+MESSAGING_INNER_API_KEY_HEADER=""
+MESSAGING_CARD_SEND_PATH="/messaging/v1/cards/send"
+MESSAGING_TIMEOUT_MS="15000"
+MESSAGING_RETRY_ATTEMPTS="3"
+MESSAGING_RETRY_BASE_MS="1000"
+MESSAGING_MAX_RETRY_DELAY_MS="30000"
+CARD_SERVICE_API_BASE=""
+CARD_SERVICE_SEND_API_KEY=""
+CARD_SERVICE_SEND_API_KEY_HEADER="X-Card-Service-Key"
+CARD_SERVICE_QA_PATH="/send/qa"
+CARD_SERVICE_QA_ANSWER_CALLBACK_URL="" # 例如 https://dailybits.example.com/api/card-events/qa-answer
+CARD_SERVICE_EVENT_SECRET=""
+CARD_SERVICE_EVENT_SECRET_HEADER="X-Card-Event-Secret"
 JINA_API_KEY=""
 GROUP_CHAT_ID=""              # 首页展示交流群号（选填）
-DEPARTMENT_API_URL=""         # 部门查询接口（选填，未配置则使用打桩数据）
+DIRECTORY_API_BASE_URL="http://127.0.0.1:4010"
+DIRECTORY_INNER_API_KEY=""
+DIRECTORY_INNER_API_KEY_HEADER="X-Inner-API-Key"
+DEPARTMENT_API_URL=""         # 旧部门查询接口（仅兼容历史数据）
 SCHEDULER_TIMEZONE="Asia/Shanghai"
 HOLIDAY_COUNTRY="CN"
 SKIP_NON_WORKING_DAYS="true"
@@ -119,6 +138,45 @@ npm run dev
 npm run scheduler
 ```
 
+## 统一认证
+
+生产环境默认 `AUTH_MODE=gateway`，应用不提供 OAuth callback，不保存 OAuth secret、access token 或 refresh token。当前用户由 Auth Hub 网关注入的 `X-User-Base64` 或 `X-User-*` 请求头解析，前端只通过同源 `GET /api/me` 获取当前用户。
+
+本地开发需要显式设置 `AUTH_MODE=dev` 和 `DEV_USER_*`。如果在生产构建或生产运行环境里设置 `AUTH_MODE=dev`，应用会拒绝启动。部署到公司网络时，DailyBits 所在机器的真实 IP:port 应只允许 Auth Hub/Nginx 来源访问。
+
+## 部门与订阅策略
+
+题库部门可见性通过 Directory v1 接入：前端调用同源 `GET /api/directory/departments/search?q=关键词`，服务端再代理到 `DIRECTORY_API_BASE_URL/directory/v1/departments/search`。保存到 `QuestionBank.visibleDepartments` 的是 `department.id`，展示名保存到 `visibleDepartmentNames` 仅用于界面回显。
+
+Auth Hub 身份中如果包含 `X-User-Base64.departments[].department.id` 或其 `path[].id`，DailyBits 会用这些稳定 ID 判断用户是否属于题库允许部门。`X-User-Department` 只适合作为展示名，不应用来当部门 code。
+
+题库创建者可以选择两种订阅策略：
+
+- 订阅者自定义：用户订阅时选择自己的推送时间。
+- 创建者固定：创建者设置每日或每周固定时间，用户点击订阅即可，不再选择时间。
+
+独立 Scheduler 每分钟按 `SCHEDULER_TIMEZONE` 计算当前时间；默认 `Asia/Shanghai`。`SKIP_NON_WORKING_DAYS=true` 时会跳过周末和 `HOLIDAY_COUNTRY` 对应法定节假日。
+
+## 卡片服务与答题回流
+
+当 `PUSH_PROVIDER=card-service` 时，DailyBits 会把题目推送到 card-service `/send/qa`，并传入 `source_system=dailybits` 与 `business_id=Question.id`。如果配置了 `CARD_SERVICE_QA_ANSWER_CALLBACK_URL`，还会把答题回调地址和密钥随发卡请求传给 card-service。
+
+AI 新闻、GitHub 热榜和知识卡片会通过公司 Messaging v1 `POST /messaging/v1/cards/send` 发送 Markdown 卡片。Digest 内容使用翻页卡片，`content` 直接传 Markdown 数组；默认每页 3 条、最多 4 页。每次业务发送都会带 `Idempotency-Key`，429/503/网络超时会按 `Retry-After` 或指数退避重试，401/403/400 不会自动重试。`INNER_API_KEY` 只从环境变量读取，不要提交到仓库或日志。
+
+推荐配置：
+
+```dotenv
+PUSH_PROVIDER=card-service
+CARD_SERVICE_API_BASE=https://card-service.example.com
+CARD_SERVICE_SEND_API_KEY=...
+CARD_SERVICE_QA_ANSWER_CALLBACK_URL=https://dailybits.example.com/api/card-events/qa-answer
+CARD_SERVICE_EVENT_SECRET=...
+INNER_API_BASE_URL=https://inner-api.company.internal
+INNER_API_KEY=...
+```
+
+用户点击 QA 卡片答题后，card-service 会回调 DailyBits `/api/card-events/qa-answer`。DailyBits 按 `cardId + respondentId` 幂等保存 `QuestionAnswerEvent`，创建者看板会展示每个题库的答题人数、答题次数和正确数，管理员总览会展示全站题库规模、每日答题趋势和使用量排行。
+
 ## Docker 部署
 
 项目已提供容器化配置，可一键启动 `Web + Scheduler + PostgreSQL`。
@@ -131,12 +189,21 @@ cp .env.example .env
 
 至少补齐以下变量（推荐）：
 
-- `NEXTAUTH_SECRET`
-- `GITHUB_ID` / `GITHUB_SECRET`（如果使用 GitHub 登录）
+- 生产环境使用 `AUTH_MODE=gateway`，由公司 Auth Hub 网关注入 `X-User-*` 请求头
 - `LLM_API_KEY`（如果使用 AI 生成能力）
-- `PUSH_API_URL`（如果接入推送服务）
+- `PUSH_API_URL`（generic webhook 模式）
+- 或 `PUSH_PROVIDER=card-service`、`CARD_SERVICE_API_BASE`、`CARD_SERVICE_SEND_API_KEY`（题目卡片走 card-service `/send/qa`）
+- `INNER_API_BASE_URL`、`INNER_API_KEY`（资讯摘要和知识卡片走公司 Messaging v1；开发 Mock 可不填真实 Key）
 
 > `docker-compose.yml` 会将 `DATABASE_URL` 覆盖为容器内数据库地址：`postgresql://postgres:postgres@db:5432/dailybits?schema=public`。
+
+### AI 新闻源
+
+默认 `AI_NEWS_PROVIDER=aihot`、`AIHOT_DIGEST_MODE=daily`，每天固定推送时会读取 AIHOT v1 日报接口 `/api/v1/dailies/{YYYY-MM-DD}`；如果当天日报还没到 `AIHOT_DAILY_READY_TIME`，会自动使用上一期日报日期，避免推送空内容。
+
+AIHOT 的旧 `/api/public/*` 外部接口已发布停服计划，本项目只使用 `/api/v1/*`。`AIHOT_DIGEST_MODE=selected` 可切换为 `/api/v1/items?mode=selected`，默认窗口为 `AIHOT_ITEMS_WINDOW=24h`、时间口径为 `AIHOT_ITEMS_BY=timeline`。
+
+AIHOT 获取失败时会先走 `AI_NEWS_RSS_FEEDS` 的兜底源，默认优先使用 AIHOT 精选 RSS，再尝试 OpenAI、MIT 和 Hacker News。定时任务只会记录日志或跳过本轮，不会把接口错误当作新闻内容推给用户。
 
 ### 2. 构建并启动
 

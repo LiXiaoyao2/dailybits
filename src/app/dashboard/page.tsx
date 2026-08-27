@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { startLogin, useSession } from "@/lib/client-auth";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { CreatedContentList } from "@/components/dashboard/created-content-list";
 import { SubscriptionList } from "@/components/dashboard/subscription-list";
@@ -12,13 +11,12 @@ import { PushHistory } from "@/components/dashboard/push-history";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login");
+      startLogin();
     }
-  }, [status, router]);
+  }, [status]);
 
   if (status === "loading" || !session) {
     return (

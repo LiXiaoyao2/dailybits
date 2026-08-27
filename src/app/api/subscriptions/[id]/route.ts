@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   getPushTimeLimitMessage,
@@ -21,7 +20,7 @@ async function authorizeSubscription(subscriptionId: string, request: NextReques
   }
 
   if (subscription.targetType === "USER") {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return { error: "Unauthorized", status: 401, subscription: null };
     }
@@ -78,6 +77,12 @@ export async function PATCH(
     }
 
     if (hasPush) {
+      if (sub.bank.subscriptionScheduleMode === "FIXED") {
+        return NextResponse.json(
+          { error: "This bank uses a fixed schedule set by the creator" },
+          { status: 400 }
+        );
+      }
       if (!Array.isArray(pushTimes) || pushTimes.length === 0) {
         return NextResponse.json(
           { error: "pushTimes must be a non-empty array" },
@@ -148,7 +153,14 @@ export async function PATCH(
       data,
       include: {
         bank: {
-          select: { id: true, title: true },
+          select: {
+            id: true,
+            title: true,
+            subscriptionScheduleMode: true,
+            subscriptionCadence: true,
+            subscriptionWeekdays: true,
+            subscriptionPushTimes: true,
+          },
         },
       },
     });

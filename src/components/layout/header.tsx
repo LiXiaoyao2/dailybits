@@ -1,8 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import {
+  BarChart3,
+  BookOpenCheck,
+  Compass,
+  Github,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  ShieldCheck,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,161 +25,206 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetTrigger,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState } from "react";
+import { signOut, startLogin, useSession } from "@/lib/client-auth";
 import { cn } from "@/lib/utils";
 
-function MenuIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M3 5h14M3 10h14M3 15h14" />
-    </svg>
-  );
-}
+const navLinks = [
+  { href: "/", label: "发现", icon: Compass },
+  { href: "/dashboard", label: "我的", icon: LayoutDashboard },
+];
 
-function GithubIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-      <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-    </svg>
-  );
+function userInitial(name?: string | null, uid?: string | null): string {
+  return (name?.trim() || uid?.trim() || "D").slice(0, 1).toUpperCase();
 }
 
 export function Header() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-
-  const navLinks = [
-    { href: "/", label: "发现" },
-    { href: "/dashboard", label: "我的" },
-  ];
+  const user = session?.user;
+  const visibleNavLinks = user?.isAdmin
+    ? [...navLinks, { href: "/admin", label: "总览", icon: BarChart3 }]
+    : navLinks;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-sm">
-      <div className="mx-auto flex h-14 max-w-[960px] items-center justify-between px-4">
-        <Link href="/" className="font-serif text-xl font-semibold tracking-wide text-foreground">
-          知识推送
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+      <div className="mx-auto flex h-15 max-w-[1180px] items-center justify-between px-4 sm:px-6">
+        <Link href="/" className="flex min-w-0 items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+            <BookOpenCheck className="size-4.5" aria-hidden />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-base font-semibold leading-5 text-foreground">
+              DailyBits
+            </span>
+            <span className="block text-xs leading-4 text-muted-foreground">
+              学习推送
+            </span>
+          </span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-6 sm:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "relative text-sm transition-colors after:absolute after:-bottom-[6px] after:left-0 after:h-[2px] after:w-full after:origin-center after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
-                pathname === link.href
-                  ? "text-foreground after:scale-x-100"
-                  : "text-muted-foreground hover:text-foreground hover:after:scale-x-60"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-
+        <nav className="hidden items-center gap-1 sm:flex">
+          {visibleNavLinks.map((link) => {
+            const Icon = link.icon;
+            const active = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" aria-hidden />
+                {link.label}
+              </Link>
+            );
+          })}
           <Link
             href="https://github.com/linqiuu/dailybits"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="GitHub"
+            title="GitHub"
           >
-            <GithubIcon />
+            <Github className="size-4" aria-hidden />
           </Link>
 
-          {session?.user ? (
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <Avatar className="h-8 w-8 cursor-pointer">
-                  <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
+                <Avatar className="ml-2 size-9 cursor-pointer border border-border">
+                  <AvatarImage src={user.image || ""} alt={user.name || ""} />
                   <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
-                    {session.user.name?.charAt(0) || "U"}
+                    {userInitial(user.name, user.uid)}
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5 text-sm font-medium">{session.user.name}</div>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5">
+                  <div className="truncate text-sm font-medium">
+                    {user.name || user.uid || user.id}
+                  </div>
+                  {user.department ? (
+                    <div className="truncate text-xs text-muted-foreground">
+                      {user.department}
+                    </div>
+                  ) : null}
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <Link href="/dashboard" className="w-full">我的书房</Link>
+                  <Link href="/dashboard" className="flex w-full items-center gap-2">
+                    <LayoutDashboard className="size-4" aria-hidden />
+                    我的订阅
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>
+                <DropdownMenuItem onClick={signOut}>
+                  <LogOut className="size-4" aria-hidden />
                   退出登录
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button size="sm" variant="outline" className="border-primary/30 text-primary hover:bg-primary/5" render={<Link href="/login" />} nativeButton={false}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-2 border-primary/30 text-primary hover:bg-primary/5"
+              onClick={startLogin}
+            >
+              <ShieldCheck className="size-3.5" aria-hidden />
               登录
             </Button>
           )}
         </nav>
 
-        {/* Mobile nav */}
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger className="p-2 text-muted-foreground sm:hidden">
-            <MenuIcon />
+          <SheetTrigger className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground sm:hidden">
+            <Menu className="size-5" aria-hidden />
           </SheetTrigger>
-          <SheetContent side="right" className="w-64">
-            <SheetTitle className="font-serif text-lg">导航</SheetTitle>
-            <nav className="mt-6 flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "text-base transition-colors",
-                    pathname === link.href
-                      ? "font-medium text-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              {session?.user ? (
+          <SheetContent side="right" className="w-72">
+            <SheetTitle className="text-base font-semibold">DailyBits</SheetTitle>
+            <nav className="mt-6 flex flex-col gap-2">
+              {visibleNavLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium",
+                      pathname === link.href
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-4" aria-hidden />
+                    {link.label}
+                  </Link>
+                );
+              })}
+              <div className="my-3 border-t border-border" />
+              {user ? (
                 <>
-                  <div className="my-2 border-t border-border" />
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={session.user.image || ""} />
+                  <div className="flex items-center gap-3 px-3 py-2">
+                    <Avatar className="size-9 border border-border">
+                      <AvatarImage src={user.image || ""} alt={user.name || ""} />
                       <AvatarFallback className="bg-primary/10 text-xs text-primary">
-                        {session.user.name?.charAt(0) || "U"}
+                        {userInitial(user.name, user.uid)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium">{session.user.name}</span>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">
+                        {user.name || user.uid || user.id}
+                      </div>
+                      {user.department ? (
+                        <div className="truncate text-xs text-muted-foreground">
+                          {user.department}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   <button
-                    onClick={() => { signOut(); setOpen(false); }}
-                    className="text-left text-sm text-error hover:underline"
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      signOut();
+                    }}
+                    className="inline-flex h-10 items-center gap-2 rounded-md px-3 text-left text-sm font-medium text-destructive hover:bg-destructive/10"
                   >
+                    <LogOut className="size-4" aria-hidden />
                     退出登录
                   </button>
                 </>
               ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="text-base font-medium text-primary"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    startLogin();
+                  }}
+                  className="inline-flex h-10 items-center gap-2 rounded-md px-3 text-left text-sm font-medium text-primary hover:bg-primary/10"
                 >
+                  <ShieldCheck className="size-4" aria-hidden />
                   登录
-                </Link>
+                </button>
               )}
-              <div className="my-2 border-t border-border" />
               <Link
                 href="https://github.com/linqiuu/dailybits"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className="inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                <GithubIcon />
+                <Github className="size-4" aria-hidden />
                 GitHub
               </Link>
             </nav>

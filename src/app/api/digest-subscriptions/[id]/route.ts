@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { MAX_PUSH_TIMES_PER_SUBSCRIPTION } from "@/types";
 
@@ -14,7 +13,7 @@ async function authorizeDigestSubscription(subscriptionId: string, request: Next
   }
 
   if (subscription.targetType === "USER") {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return { error: "Unauthorized", status: 401, subscription: null };
     }

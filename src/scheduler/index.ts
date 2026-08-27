@@ -6,21 +6,15 @@ import type { TargetType, EndCondition } from "../generated/prisma/client.js";
 import Holidays from "date-holidays";
 import { runDueDigestSubscriptions } from "../lib/digest/delivery.js";
 import { runDueKnowledgeSubscriptions } from "../lib/knowledge/delivery.js";
+import { pushToTarget } from "../lib/push/adapter.js";
+import { buildPayload } from "../lib/push/payload.js";
+import { isoWeekdayInTimeZone } from "../lib/subscriptions/schedule.js";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 const holidayCalendar = new Holidays(process.env.HOLIDAY_COUNTRY ?? "CN");
 const skipNonWorkingDays = process.env.SKIP_NON_WORKING_DAYS !== "false";
 const schedulerTZ = process.env.SCHEDULER_TIMEZONE ?? "Asia/Shanghai";
-
-interface PushPayload {
-  receiver: string;
-  title: string;
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  explanation: string;
-}
 
 function getCurrentTimeHHMM(): string {
   const now = new Date();
@@ -136,18 +130,20 @@ async function resolveReceiver(
   return user?.uid ?? targetId;
 }
 
-async function pushToEndpoint(payload: PushPayload): Promise<boolean> {
-  const url = process.env.PUSH_API_URL;
-  if (!url) {
-    console.log("[PUSH MOCK]", JSON.stringify(payload, null, 2));
-    return true;
-  }
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return response.ok;
+function shouldRunFixedBankScheduleToday(
+  bank: {
+    subscriptionScheduleMode: string;
+    subscriptionCadence: string;
+    subscriptionWeekdays: number[];
+  },
+  date: Date,
+): boolean {
+  if (bank.subscriptionScheduleMode !== "FIXED") return true;
+  if (bank.subscriptionCadence !== "WEEKLY") return true;
+  const weekdays = bank.subscriptionWeekdays.length
+    ? bank.subscriptionWeekdays
+    : [1];
+  return weekdays.includes(isoWeekdayInTimeZone(date, schedulerTZ));
 }
 
 cron.schedule("* * * * *", async () => {
@@ -173,13 +169,26 @@ cron.schedule("* * * * *", async () => {
   const matchedSubs = await prisma.subscription.findMany({
     where: {
       isActive: true,
-      pushTimes: { has: currentTime },
+      OR: [
+        {
+          pushTimes: { has: currentTime },
+          bank: { subscriptionScheduleMode: "CUSTOM" },
+        },
+        {
+          bank: {
+            subscriptionScheduleMode: "FIXED",
+            subscriptionPushTimes: { has: currentTime },
+          },
+        },
+      ],
     },
     include: { bank: true },
   });
 
   for (const sub of matchedSubs) {
     try {
+      if (!shouldRunFixedBankScheduleToday(sub.bank, now)) continue;
+
       let question = await selectQuestion(sub.targetType, sub.targetId, sub.bankId);
 
       if (!question) {
@@ -191,16 +200,17 @@ cron.schedule("* * * * *", async () => {
       }
 
       const receiver = await resolveReceiver(sub.targetType, sub.targetId);
-      const payload = {
+      const payload = buildPayload(receiver, sub.bank.title, question, {
+        authorId: sub.subscriberId ?? sub.targetId,
+        businessId: question.id,
+        domain: sub.bank.title,
+        scene: "daily-question",
+      });
+      const success = await pushToTarget({
+        ...payload,
         receiver,
-        title: sub.bank.title,
-        question: question.content,
         options: question.options as string[],
-        correctAnswer: question.correctAnswer,
-        explanation: question.explanation,
-      };
-
-      const success = await pushToEndpoint(payload);
+      });
       if (success) {
         await prisma.pushLog.create({
           data: {

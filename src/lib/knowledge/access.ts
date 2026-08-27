@@ -12,11 +12,19 @@ export async function canAccessKnowledgeBank(
     visibleDepartments: string[];
   },
   userId?: string,
+  userDepartmentKeys?: string[],
 ): Promise<boolean> {
   if (bank.visibility === "PUBLIC") return true;
   if (!userId) return false;
   if (bank.creatorId === userId) return true;
   if (bank.visibility !== "PARTIAL") return false;
+
+  if (userDepartmentKeys) {
+    const departmentSet = new Set(userDepartmentKeys);
+    return bank.visibleDepartments.some((department) =>
+      departmentSet.has(department),
+    );
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: userId },

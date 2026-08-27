@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookMarked, BookOpen, Eye, Pencil, Users } from "lucide-react";
+import { BookMarked, BookOpen, CheckCircle2, Eye, Pencil, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,9 @@ interface CreatedQuestionBank {
   title: string;
   description: string | null;
   subscriberCount: number;
+  answerCount?: number;
+  correctAnswerCount?: number;
+  answererCount?: number;
   visibility: Visibility;
   updatedAt: string;
   _count: { questions: number };
@@ -171,6 +174,9 @@ export function CreatedContentList() {
                   icon="question"
                   itemCountLabel={`${bank._count.questions} 题`}
                   subscriberCount={bank.subscriberCount}
+                  answerCount={bank.answerCount ?? 0}
+                  correctAnswerCount={bank.correctAnswerCount ?? 0}
+                  answererCount={bank.answererCount ?? 0}
                   visibility={bank.visibility}
                   updatedAt={bank.updatedAt}
                   viewHref={`/bank/${bank.id}`}
@@ -228,6 +234,9 @@ function CreatedItemCard({
   icon,
   itemCountLabel,
   subscriberCount,
+  answerCount = 0,
+  correctAnswerCount = 0,
+  answererCount = 0,
   visibility,
   updatedAt,
   viewHref,
@@ -239,6 +248,9 @@ function CreatedItemCard({
   icon: "question" | "knowledge";
   itemCountLabel: string;
   subscriberCount: number;
+  answerCount?: number;
+  correctAnswerCount?: number;
+  answererCount?: number;
   visibility: Visibility;
   updatedAt: string;
   viewHref: string;
@@ -247,6 +259,9 @@ function CreatedItemCard({
 }) {
   const Icon = icon === "question" ? BookOpen : BookMarked;
   const formattedDate = formatDate(updatedAt);
+  const accuracy = answerCount > 0
+    ? Math.round((correctAnswerCount / answerCount) * 1000) / 10
+    : 0;
 
   return (
     <Card
@@ -282,6 +297,17 @@ function CreatedItemCard({
             <Users className="size-3" />
             {subscriberCount} 人订阅过
           </Badge>
+          {icon === "question" ? (
+            <>
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle2 className="size-3" />
+                {answererCount} 人答题
+              </Badge>
+              <Badge variant="outline">
+                {answerCount} 次 · 正确率 {accuracy}%
+              </Badge>
+            </>
+          ) : null}
           {formattedDate ? (
             <Badge variant="outline">更新 {formattedDate}</Badge>
           ) : null}

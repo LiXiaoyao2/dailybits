@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession, getSessionDepartmentKeys } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getUserDepartments } from "@/lib/getUserDepartments";
+import { parseQuestionBankSchedule } from "@/lib/subscriptions/schedule";
 
 const VISIBILITY_VALUES = ["PRIVATE", "PUBLIC", "PARTIAL"] as const;
 type VisibilityValue = (typeof VISIBILITY_VALUES)[number];
@@ -21,18 +20,14 @@ async function canViewBank(
     visibleDepartments: string[];
     creatorId: string;
   },
-  sessionUserId: string | undefined
+  sessionUserId: string | undefined,
+  userDepartments: string[],
 ): Promise<boolean> {
   if (bank.visibility === "PUBLIC") return true;
   if (sessionUserId && bank.creatorId === sessionUserId) return true;
   if (bank.visibility === "PRIVATE") return false;
   if (bank.visibility === "PARTIAL") {
     if (!sessionUserId) return false;
-    const user = await prisma.user.findUnique({
-      where: { id: sessionUserId },
-      select: { uid: true },
-    });
-    const userDepartments = await getUserDepartments(user?.uid);
     return departmentsOverlap(userDepartments, bank.visibleDepartments);
   }
   return false;
@@ -64,14 +59,16 @@ export async function GET(
       return NextResponse.json({ error: "Bank not found" }, { status: 404 });
     }
 
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
+    const userDepartments = await getSessionDepartmentKeys(session);
     const allowed = await canViewBank(
       {
         visibility: bank.visibility as VisibilityValue,
         visibleDepartments: bank.visibleDepartments,
         creatorId: bank.creatorId,
       },
-      session?.user?.id
+      session?.user?.id,
+      userDepartments,
     );
     if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -97,6 +94,8 @@ export async function GET(
             id: subscription.id,
             isActive: subscription.isActive,
             pushTimes: subscription.pushTimes,
+            endCondition: subscription.endCondition,
+            repeatCount: subscription.repeatCount,
           }
         : null,
     });
@@ -114,7 +113,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -134,11 +133,12 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { title, description, visibility, visibleDepartments } = body as {
+    const { title, description, visibility, visibleDepartments, visibleDepartmentNames } = body as {
       title?: string;
       description?: string;
       visibility?: unknown;
       visibleDepartments?: unknown;
+      visibleDepartmentNames?: unknown;
     };
 
     const data: {
@@ -146,6 +146,11 @@ export async function PATCH(
       description?: string | null;
       visibility?: VisibilityValue;
       visibleDepartments?: string[];
+      visibleDepartmentNames?: string[];
+      subscriptionScheduleMode?: "CUSTOM" | "FIXED";
+      subscriptionCadence?: "DAILY" | "WEEKLY";
+      subscriptionWeekdays?: number[];
+      subscriptionPushTimes?: string[];
     } = {};
     if (title !== undefined) {
       if (typeof title !== "string" || title.trim() === "") {
@@ -195,10 +200,40 @@ export async function PATCH(
             { status: 400 }
           );
         }
-        deps.push(d.trim());
+        const department = d.trim();
+        if (!deps.includes(department)) {
+          deps.push(department);
+        }
       }
       nextVisibleDepartments = deps;
       data.visibleDepartments = deps;
+      data.visibleDepartmentNames = deps;
+    }
+
+    if (visibleDepartmentNames !== undefined) {
+      if (!Array.isArray(visibleDepartmentNames)) {
+        return NextResponse.json(
+          { error: "visibleDepartmentNames must be an array of strings" },
+          { status: 400 }
+        );
+      }
+      const names: string[] = [];
+      for (const item of visibleDepartmentNames) {
+        if (typeof item !== "string" || item.trim() === "") {
+          return NextResponse.json(
+            { error: "visibleDepartmentNames must be non-empty strings" },
+            { status: 400 }
+          );
+        }
+        names.push(item.trim());
+      }
+      if (names.length !== nextVisibleDepartments.length) {
+        return NextResponse.json(
+          { error: "visibleDepartmentNames must align with visibleDepartments" },
+          { status: 400 }
+        );
+      }
+      data.visibleDepartmentNames = names;
     }
 
     const effectiveVisibility = data.visibility ?? nextVisibility;
@@ -212,6 +247,22 @@ export async function PATCH(
         { status: 400 }
       );
     }
+    if (effectiveVisibility !== "PARTIAL") {
+      data.visibleDepartments = [];
+      data.visibleDepartmentNames = [];
+      nextVisibleDepartments = [];
+    }
+
+    const schedule = parseQuestionBankSchedule(body, {
+      subscriptionScheduleMode: existing.subscriptionScheduleMode,
+      subscriptionCadence: existing.subscriptionCadence,
+      subscriptionWeekdays: existing.subscriptionWeekdays,
+      subscriptionPushTimes: existing.subscriptionPushTimes,
+    });
+    if (!schedule.ok) {
+      return NextResponse.json({ error: schedule.error }, { status: 400 });
+    }
+    Object.assign(data, schedule.value);
 
     const bank = await prisma.questionBank.update({
       where: { id },
@@ -241,7 +292,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

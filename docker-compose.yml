@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-bookworm
     restart: unless-stopped
     environment:
       POSTGRES_DB: dailybits
@@ -27,7 +27,7 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/dailybits?schema=public
-      NEXTAUTH_URL: http://localhost:3000
+      AUTH_MODE: gateway
     command: sh -c "npx prisma migrate deploy && npm run start"
     ports:
       - "3000:3000"

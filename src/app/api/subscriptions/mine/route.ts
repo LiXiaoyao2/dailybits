@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -24,6 +23,10 @@ export async function GET() {
           select: {
             id: true,
             title: true,
+            subscriptionScheduleMode: true,
+            subscriptionCadence: true,
+            subscriptionWeekdays: true,
+            subscriptionPushTimes: true,
             _count: { select: { questions: true } },
           },
         },
@@ -54,6 +57,10 @@ export async function GET() {
       id: sub.id,
       bankId: sub.bankId,
       pushTimes: sub.pushTimes,
+      effectivePushTimes:
+        sub.bank.subscriptionScheduleMode === "FIXED"
+          ? sub.bank.subscriptionPushTimes
+          : sub.pushTimes,
       isActive: sub.isActive,
       bank: sub.bank,
       questionCount: sub.bank._count.questions,

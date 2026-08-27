@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { startLogin, useSession } from "@/lib/client-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -486,7 +485,6 @@ function GroupBankCard({
   onSubscribed: () => void;
 }) {
   const { data: session, status: sessionStatus } = useSession();
-  const router = useRouter();
   const isSubscribed = !!subscription;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pushTimes, setPushTimes] = useState<string[]>([...DEFAULT_PUSH_TIMES]);
@@ -674,7 +672,7 @@ function GroupBankCard({
               className="h-7 text-xs"
               onClick={() => {
                 toast.info("请先登录");
-                router.push("/login");
+                startLogin();
               }}
             >
               订阅

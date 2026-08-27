@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentSession } from "@/lib/auth";
 
-type DepartmentItem = { name: string };
+type DepartmentItem = { id?: string; name: string };
 type DepartmentsResponse = { departments: DepartmentItem[] };
 
 const MOCK_DEPARTMENTS: DepartmentsResponse = {
@@ -32,21 +30,31 @@ function normalizeDepartmentsPayload(data: unknown): DepartmentsResponse | null 
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const baseUrl = process.env.DEPARTMENT_API_URL?.trim();
     if (!baseUrl) {
+      const gatewayDepartments = new Map<string, DepartmentItem>();
+      for (const membership of session.user.departments) {
+        for (const node of [membership.department, ...membership.path]) {
+          if (!node.id && !node.name) continue;
+          const key = node.id || node.name;
+          gatewayDepartments.set(key, {
+            id: node.id || undefined,
+            name: node.name || node.id,
+          });
+        }
+      }
+      if (gatewayDepartments.size > 0) {
+        return NextResponse.json({ departments: [...gatewayDepartments.values()] });
+      }
       return NextResponse.json(MOCK_DEPARTMENTS);
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { uid: true },
-    });
-    const userUid = user?.uid ?? "";
+    const userUid = session.user.uid ?? "";
 
     const upstreamUrl = baseUrl.includes("?")
       ? `${baseUrl}&uid=${encodeURIComponent(userUid)}`

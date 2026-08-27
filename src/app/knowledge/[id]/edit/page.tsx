@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/client-auth";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -132,7 +132,10 @@ export default function EditKnowledgeBankPage({
   }, [bankId, router]);
 
   React.useEffect(() => {
-    void refresh();
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
   const saveTitle = async (event?: React.FormEvent<HTMLFormElement>) => {

@@ -88,11 +88,17 @@ export function QuestionList({ bankId, isCreator }: QuestionListProps) {
   }, [bankId]);
 
   React.useEffect(() => {
-    fetchQuestions();
+    const timer = window.setTimeout(() => {
+      fetchQuestions();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [fetchQuestions]);
 
   React.useEffect(() => {
-    setSelectedIds(new Set());
+    const timer = window.setTimeout(() => {
+      setSelectedIds(new Set());
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [filter]);
 
   const filtered = React.useMemo(() => {

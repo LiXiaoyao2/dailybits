@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { getUserDepartments } from "@/lib/getUserDepartments";
+import { getCurrentSession, getSessionDepartmentKeys, type AppSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -56,17 +54,15 @@ function parseVisibilityBody(body: {
   return { visibility, visibleDepartments };
 }
 
-async function getVisibilityWhere(sessionUserId?: string): Promise<Prisma.KnowledgeBankWhereInput> {
-  if (!sessionUserId) return { visibility: "PUBLIC" };
+async function getVisibilityWhere(
+  session: AppSession | null,
+): Promise<Prisma.KnowledgeBankWhereInput> {
+  if (!session?.user?.id) return { visibility: "PUBLIC" };
 
-  const user = await prisma.user.findUnique({
-    where: { id: sessionUserId },
-    select: { uid: true },
-  });
-  const userDepartments = await getUserDepartments(user?.uid);
+  const userDepartments = await getSessionDepartmentKeys(session);
   const visibilityOr: Prisma.KnowledgeBankWhereInput[] = [
     { visibility: "PUBLIC" },
-    { creatorId: sessionUserId },
+    { creatorId: session.user.id },
   ];
   if (userDepartments.length > 0) {
     visibilityOr.push({
@@ -87,7 +83,7 @@ export async function GET(request: NextRequest) {
     const ownerIsMine = searchParams.get("owner") === "mine";
     const targetType = (searchParams.get("targetType") ?? "USER") as "USER" | "GROUP";
     const targetIdParam = searchParams.get("targetId");
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
 
     const searchWhere: Prisma.KnowledgeBankWhereInput = search
       ? {
@@ -107,7 +103,7 @@ export async function GET(request: NextRequest) {
       }
       visibilityWhere = { creatorId: session.user.id };
     } else {
-      visibilityWhere = await getVisibilityWhere(session?.user?.id);
+      visibilityWhere = await getVisibilityWhere(session);
     }
     const where: Prisma.KnowledgeBankWhereInput = search
       ? { AND: [searchWhere, visibilityWhere] }
@@ -176,7 +172,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

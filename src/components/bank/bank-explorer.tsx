@@ -15,6 +15,13 @@ interface Bank {
   description: string | null;
   creatorId: string;
   subscriberCount: number;
+  answerCount: number;
+  correctAnswerCount: number;
+  answererCount: number;
+  subscriptionScheduleMode: "CUSTOM" | "FIXED";
+  subscriptionCadence: "DAILY" | "WEEKLY";
+  subscriptionWeekdays: number[];
+  subscriptionPushTimes: string[];
   creator: { id: string; name: string | null; image: string | null; uid?: string | null };
   _count: { questions: number };
   isSubscribed?: boolean;
@@ -34,6 +41,7 @@ export function BankExplorer() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ApiResponse | null>(null);
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const fetchIdRef = useRef(0);
 
@@ -46,6 +54,7 @@ export function BankExplorer() {
   const fetchBanks = useCallback(() => {
     const id = ++fetchIdRef.current;
     setLoading(true);
+    setError(false);
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("search", debouncedSearch);
     params.set("page", String(page));
@@ -55,12 +64,16 @@ export function BankExplorer() {
         if (id !== fetchIdRef.current) return;
         if ("error" in json) {
           setData(null);
+          setError(true);
         } else {
           setData(json);
         }
       })
       .catch(() => {
-        if (id === fetchIdRef.current) setData(null);
+        if (id === fetchIdRef.current) {
+          setData(null);
+          setError(true);
+        }
       })
       .finally(() => {
         if (id === fetchIdRef.current) setLoading(false);
@@ -86,7 +99,7 @@ export function BankExplorer() {
             placeholder="搜索题库..."
             value={search}
             onChange={handleSearchChange}
-            className="h-10 rounded-xl border-border/80 bg-card pl-10 pr-3 shadow-[0_3px_10px_rgba(44,48,54,0.05)] focus-visible:ring-primary/25"
+            className="h-10 rounded-md border-border/80 bg-card pl-10 pr-3 shadow-none focus-visible:ring-primary/20"
           />
         </div>
         {data?.isLoggedIn ? (
@@ -103,17 +116,30 @@ export function BankExplorer() {
 
       {loading ? (
         <SkeletonCardGrid />
+      ) : error ? (
+        <EmptyState
+          title="题库暂时加载失败"
+          description="稍后刷新页面，或联系管理员检查数据服务状态。"
+        />
       ) : data?.banks.length ? (
         <>
-          <div className="grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {data.banks.map((bank, index) => (
-              <div key={bank.id} className="w-full max-w-sm">
+              <div key={bank.id} className="w-full">
                 <BankCard
                   id={bank.id}
                   title={bank.title}
+                  description={bank.description}
                   creator={bank.creator}
                   questionCount={bank._count.questions}
                   subscriberCount={bank.subscriberCount}
+                  answerCount={bank.answerCount}
+                  correctAnswerCount={bank.correctAnswerCount}
+                  answererCount={bank.answererCount}
+                  subscriptionScheduleMode={bank.subscriptionScheduleMode}
+                  subscriptionCadence={bank.subscriptionCadence}
+                  subscriptionWeekdays={bank.subscriptionWeekdays}
+                  subscriptionPushTimes={bank.subscriptionPushTimes}
                   isLoggedIn={data?.isLoggedIn}
                   isSubscribed={bank.isSubscribed}
                   subscriptionCount={data?.subscriptionCount ?? 0}

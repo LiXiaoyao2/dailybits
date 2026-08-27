@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSubscriptionReuseAction } from "@/lib/subscriptions/reuse";
+import { normalizePushTimes } from "@/lib/subscriptions/schedule";
 import {
   MAX_SUBSCRIPTIONS_PER_TARGET,
   MAX_PUSH_TIMES_PER_SUBSCRIPTION,
@@ -80,6 +80,10 @@ export async function GET(
             title: true,
             description: true,
             subscriberCount: true,
+            subscriptionScheduleMode: true,
+            subscriptionCadence: true,
+            subscriptionWeekdays: true,
+            subscriptionPushTimes: true,
             _count: { select: { questions: true } },
           },
         },
@@ -137,7 +141,7 @@ export async function POST(
   context: { params: Promise<{ groupId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -160,14 +164,18 @@ export async function POST(
       );
     }
 
-    const times = Array.isArray(pushTimes) && pushTimes.length > 0
-      ? pushTimes
-      : DEFAULT_PUSH_TIMES;
+    const bank = await prisma.questionBank.findUnique({
+      where: { id: bankId.trim() },
+    });
+    if (!bank) {
+      return NextResponse.json({ error: "Bank not found" }, { status: 404 });
+    }
 
-    const validTimes = times.filter(
-      (t) => typeof t === "string" && /^\d{2}:\d{2}$/.test(t)
-    );
-    if (validTimes.length === 0) {
+    const validTimes =
+      bank.subscriptionScheduleMode === "FIXED"
+        ? normalizePushTimes(bank.subscriptionPushTimes, DEFAULT_PUSH_TIMES)
+        : normalizePushTimes(pushTimes, DEFAULT_PUSH_TIMES);
+    if (!validTimes) {
       return NextResponse.json(
         { error: "pushTimes must contain valid HH:MM format strings" },
         { status: 400 }
@@ -178,13 +186,6 @@ export async function POST(
         { error: `pushTimes cannot exceed ${MAX_PUSH_TIMES_PER_SUBSCRIPTION}` },
         { status: 400 }
       );
-    }
-
-    const bank = await prisma.questionBank.findUnique({
-      where: { id: bankId.trim() },
-    });
-    if (!bank) {
-      return NextResponse.json({ error: "Bank not found" }, { status: 404 });
     }
 
     const existing = await prisma.subscription.findUnique({
@@ -227,7 +228,16 @@ export async function POST(
             subscriberId: session.user.id,
           },
           include: {
-            bank: { select: { id: true, title: true } },
+            bank: {
+              select: {
+                id: true,
+                title: true,
+                subscriptionScheduleMode: true,
+                subscriptionCadence: true,
+                subscriptionWeekdays: true,
+                subscriptionPushTimes: true,
+              },
+            },
             subscriber: {
               select: { id: true, name: true, uid: true },
             },
@@ -268,7 +278,16 @@ export async function POST(
           subscriberId: session.user.id,
         },
         include: {
-          bank: { select: { id: true, title: true } },
+          bank: {
+            select: {
+              id: true,
+              title: true,
+              subscriptionScheduleMode: true,
+              subscriptionCadence: true,
+              subscriptionWeekdays: true,
+              subscriptionPushTimes: true,
+            },
+          },
           subscriber: {
             select: { id: true, name: true, uid: true },
           },

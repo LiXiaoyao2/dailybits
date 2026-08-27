@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import { canAccessKnowledgeBank } from "@/lib/knowledge/access";
 import { prisma } from "@/lib/prisma";
 import {
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const targetType = (searchParams.get("targetType") ?? "USER") as "USER" | "GROUP";
     const targetIdParam = searchParams.get("targetId");
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
 
     let targetId: string | null = null;
     if (targetType === "GROUP") {
@@ -113,7 +112,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

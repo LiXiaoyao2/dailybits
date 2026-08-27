@@ -52,9 +52,9 @@ interface ArxivPaper {
 
 interface AihotDailyItem {
   title?: string;
-  summary?: string;
-  sourceUrl?: string;
-  sourceName?: string;
+  summary?: string | null;
+  source?: AihotSource;
+  links?: AihotLinks;
 }
 
 interface AihotDailySection {
@@ -62,18 +62,32 @@ interface AihotDailySection {
   items?: AihotDailyItem[];
 }
 
-interface AihotDailyResponse {
+interface AihotDailyReport {
   date?: string;
   sections?: AihotDailySection[];
 }
 
+interface AihotDailyResponse {
+  report?: AihotDailyReport;
+}
+
+interface AihotSource {
+  name?: string;
+}
+
+interface AihotLinks {
+  aihot?: string | null;
+  original?: string | null;
+}
+
 interface AihotSelectedItem {
   title?: string;
-  url?: string;
-  source?: string;
+  links?: AihotLinks;
+  source?: AihotSource;
   publishedAt?: string;
-  summary?: string;
-  category?: string;
+  summary?: string | null;
+  category?: string | null;
+  reason?: string | null;
 }
 
 interface AihotSelectedResponse {
@@ -81,6 +95,7 @@ interface AihotSelectedResponse {
 }
 
 const DEFAULT_AI_NEWS_FEEDS = [
+  "https://aihot.virxact.com/feed.xml",
   "https://openai.com/news/rss.xml",
   "https://news.mit.edu/rss/topic/artificial-intelligence2",
 ];
@@ -104,6 +119,7 @@ const DEFAULT_NEWS_TRANSLATION_MAX_CHARS = 1800;
 const DEFAULT_ARXIV_TRANSLATION_MAX_CHARS = 3500;
 
 let digestSummaryClient: OpenAI | null | undefined;
+let digestSummaryClientConfigKey: string | undefined;
 
 function compactWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -357,6 +373,18 @@ function getAihotDigestMode(): "daily" | "selected" {
     : "daily";
 }
 
+function getAihotItemsWindow(): "24h" | "7d" {
+  return (process.env.AIHOT_ITEMS_WINDOW ?? "24h").toLowerCase() === "7d"
+    ? "7d"
+    : "24h";
+}
+
+function getAihotItemsBy(): "timeline" | "published" {
+  return (process.env.AIHOT_ITEMS_BY ?? "timeline").toLowerCase() === "published"
+    ? "published"
+    : "timeline";
+}
+
 export function getAiNewsDigestCacheDate(date: Date, timezone: string): string {
   const today = getDateInTimezone(date, timezone);
   if (!isAihotAiNewsEnabled() || getAihotDigestMode() !== "daily") return today;
@@ -460,15 +488,26 @@ async function fetchJson<T>(url: string, headers?: HeadersInit): Promise<T> {
 }
 
 function getDigestSummaryClient(): OpenAI | null {
-  if (digestSummaryClient !== undefined) return digestSummaryClient;
-  if (!process.env.LLM_API_KEY) {
+  const apiKey = process.env.LLM_API_KEY;
+  const baseURL = process.env.LLM_API_BASE_URL || "";
+  const timeout = getLlmTimeoutMs();
+  const configKey = apiKey ? `${apiKey}\0${baseURL}\0${timeout}` : "";
+  if (
+    digestSummaryClient !== undefined &&
+    digestSummaryClientConfigKey === configKey
+  ) {
+    return digestSummaryClient;
+  }
+
+  digestSummaryClientConfigKey = configKey;
+  if (!apiKey) {
     digestSummaryClient = null;
     return digestSummaryClient;
   }
   digestSummaryClient = new OpenAI({
-    apiKey: process.env.LLM_API_KEY,
-    baseURL: process.env.LLM_API_BASE_URL || undefined,
-    timeout: getLlmTimeoutMs(),
+    apiKey,
+    baseURL: baseURL || undefined,
+    timeout,
   });
   return digestSummaryClient;
 }
@@ -680,8 +719,16 @@ function parseRssItems(xml: string, source: string): DigestItem[] {
   });
 }
 
-function pickAihotDailyItems(daily: AihotDailyResponse, limit: number): DigestItem[] {
-  const sections = (daily.sections ?? [])
+function getAihotItemUrl(links?: AihotLinks): string | undefined {
+  return links?.original ?? links?.aihot ?? undefined;
+}
+
+function getAihotSourceName(source?: AihotSource): string {
+  return source?.name ?? "AIHOT";
+}
+
+function pickAihotDailyItems(report: AihotDailyReport | undefined, limit: number): DigestItem[] {
+  const sections = (report?.sections ?? [])
     .map((section) => ({
       label: section.label ?? "AI HOT",
       items: section.items ?? [],
@@ -696,10 +743,10 @@ function pickAihotDailyItems(daily: AihotDailyResponse, limit: number): DigestIt
       if (!item) continue;
       picked.push({
         title: item.title ?? "Untitled",
-        url: item.sourceUrl,
-        source: item.sourceName ?? "AI HOT",
+        url: getAihotItemUrl(item.links),
+        source: getAihotSourceName(item.source),
         summary: item.summary || "No summary provided.",
-        meta: [`日报: ${daily.date ?? ""}`, `分类: ${section.label}`]
+        meta: [`日报: ${report?.date ?? ""}`, `分类: ${section.label}`]
           .filter((value) => !value.endsWith(": "))
           .join(" | "),
       });
@@ -715,26 +762,28 @@ function pickAihotDailyItems(daily: AihotDailyResponse, limit: number): DigestIt
 async function fetchAihotDailyItems(limit: number, digestDate?: string): Promise<DigestItem[]> {
   const baseUrl = getAihotApiBaseUrl();
   const path = digestDate
-    ? `/api/public/daily/${encodeURIComponent(digestDate)}`
-    : "/api/public/daily";
+    ? `/api/v1/dailies/${encodeURIComponent(digestDate)}`
+    : "/api/v1/dailies/latest";
   const daily = await fetchJson<AihotDailyResponse>(`${baseUrl}${path}`, getAihotHeaders());
-  return pickAihotDailyItems(daily, limit);
+  return pickAihotDailyItems(daily.report, limit);
 }
 
 async function fetchAihotSelectedItems(limit: number): Promise<DigestItem[]> {
   const baseUrl = getAihotApiBaseUrl();
-  const url = new URL(`${baseUrl}/api/public/items`);
+  const url = new URL(`${baseUrl}/api/v1/items`);
   url.searchParams.set("mode", "selected");
-  url.searchParams.set("take", String(limit));
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("window", getAihotItemsWindow());
+  url.searchParams.set("by", getAihotItemsBy());
 
   const response = await fetchJson<AihotSelectedResponse>(url.toString(), getAihotHeaders());
   return (response.items ?? [])
     .slice(0, limit)
     .map((item) => ({
       title: item.title ?? "Untitled",
-      url: item.url,
-      source: item.source ?? "AI HOT",
-      summary: item.summary || "No summary provided.",
+      url: getAihotItemUrl(item.links),
+      source: getAihotSourceName(item.source),
+      summary: item.summary || item.reason || "No summary provided.",
       meta: item.publishedAt ? `published: ${item.publishedAt}` : item.category ? `分类: ${item.category}` : undefined,
     }));
 }

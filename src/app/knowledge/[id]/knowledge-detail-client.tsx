@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { startLogin } from "@/lib/client-auth";
 import { paginateKnowledgePoints } from "@/lib/knowledge/pagination";
 import { DEFAULT_KNOWLEDGE_PUSH_TIMES, MAX_PUSH_TIMES_PER_SUBSCRIPTION } from "@/types";
 
@@ -247,7 +248,7 @@ export function KnowledgeDetailClient({
                 </DialogContent>
               </Dialog>
             ) : (
-              <Button render={<Link href="/login" />} nativeButton={false}>
+              <Button onClick={startLogin}>
                 登录后订阅
               </Button>
             )}

@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { BookOpenCheck, MessageSquareText, Pencil, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CommentSection } from "@/components/bank/comment-section";
+import type { SubscriptionCadence, SubscriptionScheduleMode } from "@/types";
 
 const QUESTIONS_PER_PAGE = 30;
 
@@ -17,6 +20,10 @@ interface BankDetailClientProps {
     description: string | null;
     creatorId: string;
     subscriberCount: number;
+    subscriptionScheduleMode: SubscriptionScheduleMode;
+    subscriptionCadence: SubscriptionCadence;
+    subscriptionWeekdays: number[];
+    subscriptionPushTimes: string[];
     creator: { id: string; name: string | null; image: string | null; uid?: string | null };
     questions: Array<{
       id: string;
@@ -58,41 +65,55 @@ export function BankDetailClient({ bank, isCreator, subscriptionSlot }: BankDeta
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div className="space-y-1">
-            <CardTitle className="font-serif text-2xl">{bank.title}</CardTitle>
-            {bank.description && (
-              <p className="text-sm text-muted-foreground">{bank.description}</p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              创建者：{bank.creator.name ?? "未知"}
-              {bank.creator.uid ? ` (${bank.creator.uid})` : ""} · {bank.questionCount} 题 ·{" "}
-              {bank.subscriberCount} 人订阅过
-            </p>
-          </div>
-          {isCreator && (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" render={<Link href={`/bank/${bank.id}/edit`} />} nativeButton={false}>
-                编辑
-              </Button>
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
-                删除
-              </Button>
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div className="min-w-0 space-y-3">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl">{bank.title}</CardTitle>
+                {bank.description ? (
+                  <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                    {bank.description}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary" className="rounded-md">
+                  <BookOpenCheck className="size-3" />
+                  {bank.questionCount} 题
+                </Badge>
+                <Badge variant="secondary" className="rounded-md">
+                  <Users className="size-3" />
+                  {bank.subscriberCount} 人订阅过
+                </Badge>
+                <Badge variant="outline" className="rounded-md">
+                  创建者 {bank.creator.name ?? "未知"}
+                  {bank.creator.uid ? ` (${bank.creator.uid})` : ""}
+                </Badge>
+              </div>
             </div>
-          )}
-        </CardHeader>
-      </Card>
+            {isCreator ? (
+              <div className="flex shrink-0 gap-2">
+                <Button variant="outline" size="sm" render={<Link href={`/bank/${bank.id}/edit`} />} nativeButton={false}>
+                  <Pencil className="size-3.5" />
+                  编辑
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDelete}>
+                  <Trash2 className="size-3.5" />
+                  删除
+                </Button>
+              </div>
+            ) : null}
+          </CardHeader>
+        </Card>
 
-      {subscriptionSlot && (
-        <div className="rounded-lg border-2 border-primary/20 bg-primary/[0.03]">
-          {subscriptionSlot}
-        </div>
-      )}
+        {subscriptionSlot}
+      </section>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-serif">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BookOpenCheck className="size-4 text-primary" />
             题目列表
             {bank.questions.length > 0 && (
               <span className="ml-2 text-sm font-normal text-muted-foreground">
@@ -162,7 +183,10 @@ export function BankDetailClient({ bank, isCreator, subscriptionSlot }: BankDeta
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-serif">评论区</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <MessageSquareText className="size-4 text-primary" />
+            评论区
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <CommentSection bankId={bank.id} canModerate={isCreator} />
