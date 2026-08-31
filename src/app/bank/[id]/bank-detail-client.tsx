@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CommentSection } from "@/components/bank/comment-section";
+import { WorkbenchPanel } from "@/components/ui/workbench";
 import type { SubscriptionCadence, SubscriptionScheduleMode } from "@/types";
 
 const QUESTIONS_PER_PAGE = 30;
@@ -66,7 +67,7 @@ export function BankDetailClient({ bank, isCreator, subscriptionSlot }: BankDeta
   return (
     <>
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <Card>
+        <WorkbenchPanel className="editor-hero" padded={false}>
           <CardHeader className="flex flex-row items-start justify-between gap-4">
             <div className="min-w-0 space-y-3">
               <div className="space-y-1">
@@ -94,7 +95,13 @@ export function BankDetailClient({ bank, isCreator, subscriptionSlot }: BankDeta
             </div>
             {isCreator ? (
               <div className="flex shrink-0 gap-2">
-                <Button variant="outline" size="sm" render={<Link href={`/bank/${bank.id}/edit`} />} nativeButton={false}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                render={<Link href={`/bank/${bank.id}/edit`} />}
+                nativeButton={false}
+              >
                   <Pencil className="size-3.5" />
                   编辑
                 </Button>
@@ -105,12 +112,12 @@ export function BankDetailClient({ bank, isCreator, subscriptionSlot }: BankDeta
               </div>
             ) : null}
           </CardHeader>
-        </Card>
+        </WorkbenchPanel>
 
         {subscriptionSlot}
       </section>
 
-      <Card>
+      <Card className="content-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <BookOpenCheck className="size-4 text-primary" />
@@ -181,7 +188,7 @@ export function BankDetailClient({ bank, isCreator, subscriptionSlot }: BankDeta
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="content-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <MessageSquareText className="size-4 text-primary" />

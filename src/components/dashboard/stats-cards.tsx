@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { BellRing, LibraryBig, Send } from "lucide-react";
+import { MetricLine } from "@/components/ui/workbench";
 
 interface Stats {
   subscribedCount: number;
@@ -29,14 +30,12 @@ export function StatsCards() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="metric-strip grid-cols-1 sm:grid-cols-3">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="card-hover animate-pulse">
-            <CardContent className="pt-6">
+          <div key={i} className="metric-cell animate-pulse">
               <div className="h-10 w-16 rounded bg-muted" />
               <div className="mt-2 h-4 w-24 rounded bg-muted" />
-            </CardContent>
-          </Card>
+          </div>
         ))}
       </div>
     );
@@ -52,33 +51,21 @@ export function StatsCards() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <Card className="paper-rise card-hover" style={{ animationDelay: "20ms" }}>
-        <CardContent className="pt-6">
-          <p className="font-serif text-4xl font-semibold text-foreground sm:text-[2.2rem]">
-            {s.subscribedCount}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">已订阅</p>
-        </CardContent>
-      </Card>
-      <Card className="paper-rise card-hover" style={{ animationDelay: "90ms" }}>
-        <CardContent className="pt-6">
-          <p className="font-serif text-4xl font-semibold text-primary sm:text-[2.2rem]">
-            {s.todayPushed} / {s.todayTotal}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">今日推送</p>
-        </CardContent>
-      </Card>
-      <Card className="paper-rise card-hover" style={{ animationDelay: "160ms" }}>
-        <CardContent className="pt-6">
-          <p className="font-serif text-4xl font-semibold text-foreground sm:text-[2.2rem]">
-            {s.createdBanksCount}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            我创建的 · 题库 {s.createdQuestionBanksCount} · 知识库 {s.createdKnowledgeBanksCount}
-          </p>
-        </CardContent>
-      </Card>
+    <div className="metric-strip grid-cols-1 sm:grid-cols-3">
+      <MetricLine icon={BellRing} label="已订阅" value={s.subscribedCount} tone="primary" />
+      <MetricLine
+        icon={Send}
+        label="今日推送"
+        value={`${s.todayPushed} / ${s.todayTotal}`}
+        tone="accent"
+      />
+      <MetricLine
+        icon={LibraryBig}
+        label="我创建的"
+        value={s.createdBanksCount}
+        detail={`题库 ${s.createdQuestionBanksCount}，知识库 ${s.createdKnowledgeBanksCount}`}
+        tone="ink"
+      />
     </div>
   );
 }

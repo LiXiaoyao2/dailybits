@@ -50,10 +50,10 @@ export function Header() {
     : navLinks;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex h-15 max-w-[1180px] items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+    <header className="nav-chrome sticky top-0 z-50">
+      <div className="nav-shell mx-auto flex h-20 w-full max-w-[1360px] min-w-0 items-center justify-between px-4 sm:px-6">
+        <Link href="/" className="brand-card flex min-w-0 items-center gap-2.5">
+          <span className="brand-tile flex size-9 shrink-0 items-center justify-center rounded-md">
             <BookOpenCheck className="size-4.5" aria-hidden />
           </span>
           <span className="min-w-0">
@@ -66,7 +66,7 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="nav-pill hidden items-center gap-1 sm:flex">
           {visibleNavLinks.map((link) => {
             const Icon = link.icon;
             const active = pathname === link.href;
@@ -74,11 +74,12 @@ export function Header() {
               <Link
                 key={link.href}
                 href={link.href}
+                data-active={active}
                 className={cn(
-                  "inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors",
+                  "route-tab inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors",
                   active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? ""
+                    : "hover:border-border hover:bg-card/70 hover:text-foreground",
                 )}
               >
                 <Icon className="size-4" aria-hidden />
@@ -90,7 +91,7 @@ export function Header() {
             href="https://github.com/linqiuu/dailybits"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
             aria-label="GitHub"
             title="GitHub"
           >
@@ -102,7 +103,7 @@ export function Header() {
               <DropdownMenuTrigger>
                 <Avatar className="ml-2 size-9 cursor-pointer border border-border">
                   <AvatarImage src={user.image || ""} alt={user.name || ""} />
-                  <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+                  <AvatarFallback className="bg-secondary text-xs font-medium text-primary">
                     {userInitial(user.name, user.uid)}
                   </AvatarFallback>
                 </Avatar>
@@ -136,7 +137,7 @@ export function Header() {
             <Button
               size="sm"
               variant="outline"
-              className="ml-2 border-primary/30 text-primary hover:bg-primary/5"
+              className="ml-2 bg-white/65"
               onClick={startLogin}
             >
               <ShieldCheck className="size-3.5" aria-hidden />
@@ -146,8 +147,17 @@ export function Header() {
         </nav>
 
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground sm:hidden">
-            <Menu className="size-5" aria-hidden />
+          <SheetTrigger
+            render={
+              <Button
+                variant="default"
+                size="icon-lg"
+                className="ml-auto bg-[color:var(--surface-ink)] text-primary-foreground sm:hidden"
+              />
+            }
+          >
+            <Menu className="size-5 text-primary-foreground" aria-hidden />
+            <span className="sr-only">打开导航</span>
           </SheetTrigger>
           <SheetContent side="right" className="w-72">
             <SheetTitle className="text-base font-semibold">DailyBits</SheetTitle>
@@ -162,7 +172,7 @@ export function Header() {
                     className={cn(
                       "inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium",
                       pathname === link.href
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
@@ -177,7 +187,7 @@ export function Header() {
                   <div className="flex items-center gap-3 px-3 py-2">
                     <Avatar className="size-9 border border-border">
                       <AvatarImage src={user.image || ""} alt={user.name || ""} />
-                      <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                      <AvatarFallback className="bg-secondary text-xs text-primary">
                         {userInitial(user.name, user.uid)}
                       </AvatarFallback>
                     </Avatar>

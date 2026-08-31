@@ -137,7 +137,7 @@ export function CommentSection({ bankId, canModerate = false }: CommentSectionPr
   };
 
   return (
-    <div className="space-y-6 font-serif">
+    <div className="space-y-6">
       {loggedIn ? (
         <div className="space-y-2 border-b border-border/60 pb-6">
           <Label htmlFor={`comment-top-${bankId}`} className="text-muted-foreground">
@@ -162,13 +162,13 @@ export function CommentSection({ bankId, canModerate = false }: CommentSectionPr
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs uppercase tracking-wider text-muted-foreground">排序</span>
-        <div className="flex gap-1 rounded-md border border-border/80 bg-muted/20 p-0.5">
+        <span className="text-xs font-medium text-muted-foreground">排序</span>
+        <div className="flex gap-1 rounded-[var(--radius)] border border-border/80 bg-muted/30 p-0.5">
           <button
             type="button"
             onClick={() => setSort("latest")}
             className={cn(
-              "rounded px-3 py-1 text-sm transition-colors",
+              "rounded-[calc(var(--radius)-0.25rem)] px-3 py-1 text-sm transition-colors",
               sort === "latest"
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -180,7 +180,7 @@ export function CommentSection({ bankId, canModerate = false }: CommentSectionPr
             type="button"
             onClick={() => setSort("likes")}
             className={cn(
-              "rounded px-3 py-1 text-sm transition-colors",
+              "rounded-[calc(var(--radius)-0.25rem)] px-3 py-1 text-sm transition-colors",
               sort === "likes"
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -383,7 +383,7 @@ function CommentRow({
     <div
       className={cn(
         "border-b border-border/40 py-4 last:border-b-0",
-        !isTopLevel && "ml-4 border-l-2 border-l-primary/15 pl-4 sm:ml-6 sm:pl-5"
+        !isTopLevel && "ml-4 border-l border-l-primary/20 pl-4 sm:ml-6 sm:pl-5"
       )}
     >
       <div className="flex gap-3">

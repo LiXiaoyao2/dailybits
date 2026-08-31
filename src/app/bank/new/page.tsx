@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader, WorkbenchPanel } from "@/components/ui/workbench";
 import {
   Select,
   SelectContent,
@@ -108,22 +109,22 @@ export default function NewBankPage() {
 
   return (
     <div className="page-enter space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-primary">题库配置</p>
-          <h1 className="mt-1 text-2xl font-semibold text-foreground">创建题库</h1>
-        </div>
-        <Button type="submit" form="new-bank-form" disabled={submitting}>
-          {submitting ? "创建中..." : "创建并进入题目管理"}
-        </Button>
-      </div>
+      <PageHeader
+        title="创建题库"
+        description="配置可见范围和订阅节奏，创建后进入题目管理。"
+        action={
+          <Button type="submit" form="new-bank-form" disabled={submitting}>
+            {submitting ? "创建中..." : "创建并进入题目管理"}
+          </Button>
+        }
+      />
 
       <form
         id="new-bank-form"
         onSubmit={handleSubmit}
         className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
       >
-        <div className="space-y-4 rounded-lg border border-border bg-card p-5 shadow-sm">
+        <WorkbenchPanel className="space-y-5">
           <section className="space-y-4">
             <div className="flex items-center gap-2">
               <FileText className="size-4 text-primary" />
@@ -179,7 +180,7 @@ export default function NewBankPage() {
             </section>
           ) : null}
 
-          <section className="space-y-3 border-t border-border pt-4">
+          <section className="space-y-3 border-t border-border pt-5">
             <div className="flex items-center gap-2">
               <CalendarClock className="size-4 text-primary" />
               <h2 className="text-base font-semibold">订阅节奏</h2>
@@ -191,10 +192,10 @@ export default function NewBankPage() {
               onNewTimeChange={setNewScheduleTime}
             />
           </section>
-        </div>
+        </WorkbenchPanel>
 
         <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
-          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <WorkbenchPanel>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="truncate text-base font-semibold" title={titlePreview}>
@@ -224,7 +225,7 @@ export default function NewBankPage() {
                 </span>
               </div>
             </div>
-          </div>
+          </WorkbenchPanel>
         </aside>
       </form>
     </div>

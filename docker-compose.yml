@@ -3,18 +3,35 @@ services:
     image: postgres:16-bookworm
     restart: unless-stopped
     environment:
-      POSTGRES_DB: dailybits
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      TZ: "${TZ:-Asia/Shanghai}"
+      POSTGRES_DB: "${POSTGRES_DB:-dailybits}"
+      POSTGRES_USER: "${POSTGRES_USER:-postgres}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d dailybits"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  migrate:
+    build:
+      context: .
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "${DOCKER_DATABASE_URL:-postgresql://postgres:postgres@db:5432/dailybits?schema=public}"
+      NODE_ENV: production
+      APP_ENV: production
+      TZ: "${TZ:-Asia/Shanghai}"
+    command: sh -c "npx prisma migrate deploy"
 
   app:
     build:
@@ -23,12 +40,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/dailybits?schema=public
+      DATABASE_URL: "${DOCKER_DATABASE_URL:-postgresql://postgres:postgres@db:5432/dailybits?schema=public}"
       AUTH_MODE: gateway
-    command: sh -c "npx prisma migrate deploy && npm run start"
+      NODE_ENV: production
+      APP_ENV: production
+      TZ: "${TZ:-Asia/Shanghai}"
+      SCHEDULER_TIMEZONE: "${SCHEDULER_TIMEZONE:-Asia/Shanghai}"
+      NEXT_TELEMETRY_DISABLED: "1"
+    command: sh -c "npm run start"
     ports:
       - "3000:3000"
 
@@ -39,11 +63,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/dailybits?schema=public
-    command: sh -c "npx prisma migrate deploy && npm run scheduler"
+      DATABASE_URL: "${DOCKER_DATABASE_URL:-postgresql://postgres:postgres@db:5432/dailybits?schema=public}"
+      NODE_ENV: production
+      APP_ENV: production
+      TZ: "${TZ:-Asia/Shanghai}"
+      SCHEDULER_TIMEZONE: "${SCHEDULER_TIMEZONE:-Asia/Shanghai}"
+      HOLIDAY_COUNTRY: "${HOLIDAY_COUNTRY:-CN}"
+      SKIP_NON_WORKING_DAYS: "${SKIP_NON_WORKING_DAYS:-true}"
+      NEXT_TELEMETRY_DISABLED: "1"
+    command: sh -c "npm run scheduler"
 
 volumes:
   postgres_data:

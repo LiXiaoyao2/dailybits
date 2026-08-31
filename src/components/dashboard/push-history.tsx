@@ -73,7 +73,7 @@ export function PushHistory() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h2 className="font-serif text-xl font-semibold">推送记录</h2>
+        <h2 className="panel-title text-lg">推送记录</h2>
         <Card>
           <CardContent className="py-6">
             <div className="space-y-4">
@@ -95,15 +95,16 @@ export function PushHistory() {
 
   return (
     <div className="space-y-4">
-      <h2 className="font-serif text-xl font-semibold">推送记录</h2>
-      <Card>
+      <h2 className="panel-title text-lg">推送记录</h2>
+      <Card className="content-card">
         <CardContent className="py-6">
           {logs.length === 0 ? (
             <EmptyState
               title="暂无推送记录"
-              description="泡一杯茶，订阅后系统会按你设定的时间送来今日一题。"
+              description="订阅后系统会按你设定的时间送来今日一题。"
               illustration="tea"
               action={{ label: "查看我的订阅", href: "/dashboard" }}
+              variant="compact"
             />
           ) : (
             <ul className="space-y-4">

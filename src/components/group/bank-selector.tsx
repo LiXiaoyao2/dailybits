@@ -140,7 +140,7 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
             <div>
               <p className="font-medium">{selectedBank.title}</p>
               <p className="text-xs text-muted-foreground">
-                {selectedBank._count.questions} 题 · {selectedBank.subscriberCount} 人订阅
+                {selectedBank._count.questions} 题，{selectedBank.subscriberCount} 人订阅
               </p>
               <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                 <CalendarClock className="size-3" />
@@ -252,7 +252,7 @@ export function BankSelector({ groupId, onSuccess }: BankSelectorProps) {
               <div>
                 <p className="text-sm font-medium">{bank.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {bank._count.questions} 题 · {bank.subscriberCount} 人订阅
+                  {bank._count.questions} 题，{bank.subscriberCount} 人订阅
                 </p>
                 <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                   <CalendarClock className="size-3" />

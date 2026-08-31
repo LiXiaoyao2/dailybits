@@ -113,7 +113,7 @@ export function CreatedContentList() {
   if (loading) {
     return (
       <section className="space-y-4">
-        <h2 className="font-serif text-xl font-semibold">我创建的</h2>
+        <h2 className="panel-title text-lg">我创建的</h2>
         <div className="grid gap-3 md:grid-cols-2">
           {[1, 2].map((item) => (
             <Card key={item} className="animate-pulse">
@@ -132,7 +132,7 @@ export function CreatedContentList() {
   if (failed) {
     return (
       <section className="space-y-4">
-        <h2 className="font-serif text-xl font-semibold">我创建的</h2>
+        <h2 className="panel-title text-lg">我创建的</h2>
         <EmptyState
           title="创建内容加载失败"
           description="稍后刷新页面重试。"
@@ -146,7 +146,7 @@ export function CreatedContentList() {
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-serif text-xl font-semibold">我创建的</h2>
+          <h2 className="panel-title text-lg">我创建的</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             共 {totalCount} 个内容库
           </p>
@@ -265,7 +265,7 @@ function CreatedItemCard({
 
   return (
     <Card
-      className="paper-rise card-hover"
+      className="content-card paper-rise card-hover"
       style={{ animationDelay: `${appearDelayMs}ms` }}
     >
       <CardHeader className="gap-3">
@@ -275,7 +275,7 @@ function CreatedItemCard({
               <Icon className="size-4" aria-hidden />
             </div>
             <div className="min-w-0 space-y-1">
-              <CardTitle className="truncate font-serif text-base" title={title}>
+              <CardTitle className="truncate text-base font-semibold" title={title}>
                 {title}
               </CardTitle>
               {description ? (
@@ -304,7 +304,7 @@ function CreatedItemCard({
                 {answererCount} 人答题
               </Badge>
               <Badge variant="outline">
-                {answerCount} 次 · 正确率 {accuracy}%
+                {answerCount} 次，正确率 {accuracy}%
               </Badge>
             </>
           ) : null}

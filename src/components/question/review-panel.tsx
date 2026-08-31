@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { Check, SkipForward, Trash2 } from "lucide-react";
 
 const inputBottomLine =
-  "border-0 border-b rounded-none focus-visible:ring-0 focus-visible:border-primary";
+  "bg-card/80";
 
 const OPTIONS_KEYS = ["A", "B", "C", "D"] as const;
 
@@ -162,13 +162,13 @@ export function ReviewPanel({ bankId, onComplete }: ReviewPanelProps) {
 
   if (loading) {
     return (
-      <p className="text-muted-foreground text-sm font-serif">加载中...</p>
+      <p className="text-sm text-muted-foreground">加载中...</p>
     );
   }
 
   if (questions.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card p-8 text-center font-serif">
+      <div className="workbench-panel p-8 text-center">
         <p className="text-muted-foreground">暂无待审核的草稿题目</p>
         <Button variant="outline" className="mt-4" onClick={onComplete}>
           完成
@@ -180,7 +180,7 @@ export function ReviewPanel({ bankId, onComplete }: ReviewPanelProps) {
   const progress = ((index + 1) / questions.length) * 100;
 
   return (
-    <div className="space-y-6 font-serif">
+    <div className="space-y-6">
       <div className="space-y-1">
         <div className="flex justify-between text-sm text-muted-foreground">
           <span>审核进度</span>
@@ -196,7 +196,7 @@ export function ReviewPanel({ bankId, onComplete }: ReviewPanelProps) {
         </div>
       </div>
 
-      <div className="space-y-6 rounded-lg border border-border bg-card p-6">
+      <div className="workbench-panel space-y-6 p-5">
         <div className="space-y-2">
           <Label>题目内容</Label>
           <Textarea

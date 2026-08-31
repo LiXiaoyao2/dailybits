@@ -14,8 +14,8 @@ export default async function GroupPage({ params }: PageProps) {
 
   return (
     <div className="page-enter space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-serif text-3xl font-semibold tracking-wide">
+      <header className="page-hero space-y-1">
+        <h1 className="text-3xl font-semibold">
           群组看板
         </h1>
         <p className="text-muted-foreground">

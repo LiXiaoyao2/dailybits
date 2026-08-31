@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { WorkbenchPanel } from "@/components/ui/workbench";
 import { startLogin } from "@/lib/client-auth";
 import { paginateKnowledgePoints } from "@/lib/knowledge/pagination";
 import { DEFAULT_KNOWLEDGE_PUSH_TIMES, MAX_PUSH_TIMES_PER_SUBSCRIPTION } from "@/types";
@@ -146,16 +147,16 @@ export function KnowledgeDetailClient({
 
   return (
     <div className="space-y-5">
-      <Card>
+      <WorkbenchPanel className="editor-hero" padded={false}>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle className="font-serif text-2xl">{bank.title}</CardTitle>
+            <CardTitle className="text-2xl font-semibold">{bank.title}</CardTitle>
             {bank.description ? (
               <p className="text-sm text-muted-foreground">{bank.description}</p>
             ) : null}
             <p className="text-sm text-muted-foreground">
               创建者：{bank.creator.name ?? "未知"}
-              {bank.creator.uid ? ` (${bank.creator.uid})` : ""} · {bank.pointCount} 条 ·{" "}
+              {bank.creator.uid ? ` (${bank.creator.uid})` : ""}，{bank.pointCount} 条，{" "}
               {bank.subscriberCount} 人订阅过
             </p>
           </div>
@@ -164,6 +165,7 @@ export function KnowledgeDetailClient({
               <Button
                 variant="outline"
                 size="sm"
+                className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
                 render={<Link href={`/knowledge/${bank.id}/edit`} />}
                 nativeButton={false}
               >
@@ -175,11 +177,11 @@ export function KnowledgeDetailClient({
             </div>
           ) : null}
         </CardHeader>
-      </Card>
+      </WorkbenchPanel>
 
-      <Card className="border-primary/20 bg-primary/[0.03]">
+      <Card className="content-card border-primary/20 bg-card/85">
         <CardHeader>
-          <CardTitle className="font-serif text-lg">每日知识卡片推送</CardTitle>
+          <CardTitle className="text-lg font-semibold">每日知识卡片推送</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-2">
@@ -204,7 +206,7 @@ export function KnowledgeDetailClient({
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle className="font-serif">
+                    <DialogTitle>
                       {subscribed ? "编辑推送时间" : `订阅「${bank.title}」`}
                     </DialogTitle>
                   </DialogHeader>
@@ -261,9 +263,9 @@ export function KnowledgeDetailClient({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="content-card">
         <CardHeader>
-          <CardTitle className="font-serif">
+          <CardTitle className="font-semibold">
             知识卡片列表
             <span className="ml-2 text-sm font-normal text-muted-foreground">
               共 {bank.pointCount} 条

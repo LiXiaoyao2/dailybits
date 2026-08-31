@@ -545,7 +545,7 @@ function GroupBankCard({
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <Link href={`/bank/${bank.id}`} className="min-w-0 hover:underline">
-            <CardTitle className="truncate font-serif text-base" title={bank.title}>
+            <CardTitle className="truncate text-base font-semibold" title={bank.title}>
               {bank.title}
             </CardTitle>
           </Link>
@@ -612,7 +612,7 @@ function GroupBankCard({
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle className="font-serif">订阅「{bank.title}」</DialogTitle>
+                  <DialogTitle>订阅「{bank.title}」</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -715,7 +715,7 @@ function SubscriptionManagementTab({
     <div className="space-y-6">
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-serif text-lg font-semibold">题库</h3>
+          <h3 className="text-lg font-semibold">题库</h3>
           <Badge variant="outline">
             {subData?.count ?? 0} / {subData?.limit ?? MAX_SUBSCRIPTIONS_PER_TARGET}
           </Badge>
@@ -731,7 +731,7 @@ function SubscriptionManagementTab({
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-serif text-lg font-semibold">知识卡片</h3>
+          <h3 className="text-lg font-semibold">知识卡片</h3>
           <Badge variant="outline">
             {knowledgeSubData?.count ?? 0} /{" "}
             {knowledgeSubData?.limit ?? MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET}
@@ -889,7 +889,7 @@ function GroupSubscriptionCard({
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <Link href={`/bank/${sub.bank.id}`} className="hover:underline">
-              <CardTitle className="font-serif text-base">
+              <CardTitle className="text-base font-semibold">
                 {sub.bank.title}
               </CardTitle>
             </Link>
@@ -919,13 +919,13 @@ function GroupSubscriptionCard({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {pushed} / {total} 题 · {sub.bank.subscriberCount} 人订阅过
+              {pushed} / {total} 题，{sub.bank.subscriberCount} 人订阅过
             </p>
           </div>
         </div>
         <div className="flex shrink-0 flex-col gap-2">
           <Dialog open={editOpen} onOpenChange={setEditOpen}>
-            <DialogTrigger className="inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium h-7 hover:bg-muted transition-colors">
+            <DialogTrigger className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted">
               编辑时间
             </DialogTrigger>
             <DialogContent>
@@ -1130,7 +1130,7 @@ function GroupKnowledgeSubscriptionCard({
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <Link href={`/knowledge/${sub.bank.id}`} className="hover:underline">
-              <CardTitle className="font-serif text-base">
+              <CardTitle className="text-base font-semibold">
                 {sub.bank.title}
               </CardTitle>
             </Link>
@@ -1153,7 +1153,7 @@ function GroupKnowledgeSubscriptionCard({
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            {sub.pushedCount} 次推送 · {sub.pointCount} 张知识卡 ·{" "}
+            {sub.pushedCount} 次推送，{sub.pointCount} 张知识卡，{" "}
             {sub.bank.subscriberCount} 人订阅过
           </p>
         </div>

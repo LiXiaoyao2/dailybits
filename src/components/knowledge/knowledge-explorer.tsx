@@ -32,11 +32,15 @@ export function KnowledgeExplorer({
   targetType = "USER",
   targetId,
   showCreate = true,
+  emptyVariant = "default",
+  layout = "grid",
   onSubscribed,
 }: {
   targetType?: "USER" | "GROUP";
   targetId?: string;
   showCreate?: boolean;
+  emptyVariant?: "default" | "compact";
+  layout?: "grid" | "list";
   onSubscribed?: () => void;
 }) {
   const [search, setSearch] = useState("");
@@ -81,22 +85,23 @@ export function KnowledgeExplorer({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="stream-toolbar flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            aria-label="搜索知识库"
             placeholder="搜索知识库..."
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
               setPage(1);
             }}
-            className="h-10 rounded-md border-border/80 bg-card pl-10 pr-3 shadow-none focus-visible:ring-primary/20"
+            className="h-11 rounded-[var(--radius)] border-border/80 bg-card pl-10 pr-3 shadow-none focus-visible:ring-primary/20"
           />
         </div>
         {data?.isLoggedIn && showCreate ? (
           <Button
-            className="h-10 shrink-0 shadow-md sm:px-5"
+            className="h-11 shrink-0 sm:px-5"
             size="lg"
             render={<Link href="/knowledge/new" />}
             nativeButton={false}
@@ -110,7 +115,17 @@ export function KnowledgeExplorer({
         <SkeletonCardGrid />
       ) : data?.banks.length ? (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="flex items-center justify-between gap-3 text-xs font-medium text-muted-foreground">
+            <span>共 {data.total} 个知识库</span>
+            <span>第 {page} / {data.totalPages} 页</span>
+          </div>
+          <div
+            className={
+              layout === "list"
+                ? "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                : "grid grid-cols-1 gap-4 md:grid-cols-2"
+            }
+          >
             {data.banks.map((bank, index) => (
               <div key={bank.id} className="w-full">
                 <KnowledgeCard
@@ -123,6 +138,7 @@ export function KnowledgeExplorer({
                   isSubscribed={bank.isSubscribed}
                   subscriptionCount={data.subscriptionCount ?? 0}
                   appearDelayMs={index * 70}
+                  compact={layout === "list"}
                   targetType={targetType}
                   targetId={targetId}
                   onSubscribed={onSubscribed}
@@ -159,12 +175,14 @@ export function KnowledgeExplorer({
         <EmptyState
           title="未找到相关知识库"
           description="尝试其他关键词，或创建新的知识库。"
+          variant={emptyVariant}
         />
       ) : (
         <EmptyState
           title="尚无知识库"
           description="创建一个知识库，把长文本整理成每日可推送的知识卡片。"
           action={{ label: "创建知识库", href: "/knowledge/new" }}
+          variant={emptyVariant}
         />
       )}
     </div>

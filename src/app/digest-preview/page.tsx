@@ -69,7 +69,7 @@ const digestDecks: DigestDeck[] = [
     time: "09:00",
     label: "每日AI知识",
     icon: Brain,
-    tone: "bg-[#2f4b66] text-white",
+    tone: "bg-[color:var(--primary)] text-white",
     pages: [
       {
         eyebrow: "知识卡 1/3",
@@ -130,7 +130,7 @@ const digestDecks: DigestDeck[] = [
     time: "09:10",
     label: "GitHub Trending",
     icon: Github,
-    tone: "bg-[#263238] text-white",
+    tone: "bg-[color:var(--surface-ink)] text-white",
     pages: [
       {
         eyebrow: "Trending 1/3",
@@ -215,7 +215,7 @@ const digestDecks: DigestDeck[] = [
     time: "09:20",
     label: "AI 新闻",
     icon: Newspaper,
-    tone: "bg-[#526e3f] text-white",
+    tone: "bg-[color:var(--accent)] text-white",
     pages: [
       {
         eyebrow: "新闻 1/2",
@@ -261,7 +261,7 @@ const digestDecks: DigestDeck[] = [
     time: "09:40",
     label: "arXiv AI 论文",
     icon: FileText,
-    tone: "bg-[#8a3b33] text-white",
+    tone: "bg-[#7D6D1F] text-white",
     pages: [
       {
         eyebrow: "论文 1/2",
@@ -269,14 +269,14 @@ const digestDecks: DigestDeck[] = [
         items: [
           {
             title: "Evaluating Long-Context Language Models",
-            meta: "cs.CL · 2026-05-08",
+            meta: "cs.CL，2026-05-08",
             summary: "论文关注长上下文模型在真实检索、推理和定位任务里的表现差异。",
             insight: "AI速读：适合用来设计知识库评测集，尤其是多文档冲突和细粒度引用场景。",
             linkLabel: "看摘要",
           },
           {
             title: "Tool-Augmented Agents with Verifiable Plans",
-            meta: "cs.AI · 2026-05-08",
+            meta: "cs.AI，2026-05-08",
             summary: "提出让 Agent 在执行前生成可验证计划，并在工具结果后修正路线。",
             insight: "AI速读：和你的推送机器人有关，后续可以把“计划、执行、复盘”做成可见的学习链路。",
             linkLabel: "看摘要",
@@ -337,7 +337,7 @@ function FeedItem({ item }: { item: DigestItem }) {
       ) : null}
       <p className="text-[13px] leading-5 text-foreground/90">{item.summary}</p>
       {item.insight ? (
-        <p className="rounded-md border-l-2 border-primary/55 bg-secondary/45 px-2.5 py-2 text-[13px] leading-5 text-foreground/90">
+        <p className="rounded-[var(--radius)] bg-secondary/60 px-2.5 py-2 text-[13px] leading-5 text-foreground/90">
           {item.insight}
         </p>
       ) : null}
@@ -349,7 +349,7 @@ function MarkdownPage({ page }: { page: DigestPage }) {
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <p className="text-[11px] font-medium uppercase tracking-normal text-muted-foreground">
+        <p className="text-[11px] font-medium text-muted-foreground">
           {page.eyebrow}
         </p>
         <h2 className="text-base font-semibold leading-snug text-foreground">
@@ -424,8 +424,8 @@ function DigestBubble({
         <Bot className="size-4" aria-hidden />
       </div>
       <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span className="font-medium text-slate-700">{deck.sender}</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{deck.sender}</span>
           <span>{deck.time}</span>
         </div>
         <div className="overflow-hidden rounded-lg border border-border/75 bg-card shadow-[0_8px_18px_rgba(44,48,54,0.08)]">
@@ -498,26 +498,26 @@ export default function DigestPreviewPage() {
 
   return (
     <div className="page-enter space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="page-hero flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-serif text-2xl font-semibold tracking-wide">
+          <h1 className="text-2xl font-semibold">
             IM 推送卡片预览
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             知识点、GitHub、新闻、论文的紧凑卡片样例
           </p>
         </div>
-        <Badge variant="secondary" className="gap-1 rounded-md">
+        <Badge variant="secondary" className="gap-1 rounded-[var(--radius)]">
           <MessageCircle className="size-3" />
           Markdown Card
         </Badge>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <section className="rounded-lg border border-border/70 bg-[#e9eef1] p-3 shadow-[0_10px_24px_rgba(44,48,54,0.08)]">
-          <div className="mb-3 flex items-center justify-between rounded-lg bg-white/80 px-3 py-2 text-sm shadow-sm">
-            <span className="font-medium text-slate-700">AI 学习群</span>
-            <span className="text-xs text-slate-500">今天</span>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
+        <section className="workbench-panel bg-[color:var(--surface-field)]/80 p-3">
+          <div className="mb-3 flex items-center justify-between rounded-[var(--radius)] bg-white/85 px-3 py-2 text-sm shadow-sm">
+            <span className="font-medium text-foreground">AI 学习群</span>
+            <span className="text-xs text-muted-foreground">今天</span>
           </div>
           <div className="space-y-4">
             {digestDecks.map((deck) => (
@@ -532,7 +532,7 @@ export default function DigestPreviewPage() {
           </div>
         </section>
 
-        <aside className="space-y-3 rounded-lg border border-border/70 bg-card p-4 text-sm shadow-[0_8px_20px_rgba(44,48,54,0.05)]">
+        <aside className="workbench-panel space-y-3 p-4 text-sm lg:sticky lg:top-24">
           <div className="flex items-center gap-2 font-semibold">
             <Sparkles className="size-4 text-primary" aria-hidden />
             组合建议
@@ -548,7 +548,7 @@ export default function DigestPreviewPage() {
               新闻和论文可以加，但应作为独立订阅；群用户自己选择后，再推更深的内容。
             </p>
           </div>
-          <div className="rounded-lg border border-border/70 bg-muted/35 p-3">
+          <div className="rounded-[var(--radius)] border border-border/70 bg-muted/35 p-3">
             <div className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold">
               <BookOpenCheck className="size-3.5 text-accent" aria-hidden />
               推荐信息结构

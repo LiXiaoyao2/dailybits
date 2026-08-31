@@ -35,6 +35,7 @@ import {
   formatSubscriptionSchedule,
   isValidPushTime,
 } from "@/lib/subscriptions/schedule";
+import { cn } from "@/lib/utils";
 
 export interface BankCardProps {
   id: string;
@@ -54,6 +55,7 @@ export interface BankCardProps {
   isSubscribed?: boolean;
   subscriptionCount?: number;
   appearDelayMs?: number;
+  compact?: boolean;
 }
 
 export function BankCard({
@@ -74,6 +76,7 @@ export function BankCard({
   isSubscribed = false,
   subscriptionCount = 0,
   appearDelayMs = 0,
+  compact = false,
 }: BankCardProps) {
   const [subscribed, setSubscribed] = useState(isSubscribed);
   const [subCount, setSubCount] = useState(subscriberCount);
@@ -148,14 +151,21 @@ export function BankCard({
 
   return (
     <Card
-      className="paper-rise card-hover flex min-h-[180px] flex-col"
+      size={compact ? "sm" : "default"}
+      className={cn(
+        "content-card paper-rise card-hover flex flex-col",
+        compact ? "min-h-[156px]" : "min-h-[220px]",
+      )}
       style={{ animationDelay: `${appearDelayMs}ms` }}
     >
-      <CardHeader className="min-w-0 gap-2 pb-2">
+      <CardHeader className={cn("min-w-0 pb-2", compact ? "gap-2" : "gap-3")}>
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <Link href={`/bank/${id}`} className="block min-w-0 hover:underline">
-              <CardTitle className="truncate font-serif text-lg" title={title}>
+              <CardTitle
+                className={cn("truncate font-semibold", compact ? "text-base" : "text-lg")}
+                title={title}
+              >
                 {title}
               </CardTitle>
             </Link>
@@ -176,24 +186,21 @@ export function BankCard({
           </p>
         ) : null}
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary">{questionCount} 题</Badge>
-            <Badge variant="secondary" className="gap-1">
-              <Users className="size-3" aria-hidden />
-              {subCount} 订阅
-            </Badge>
-            <Badge variant="secondary" className="gap-1">
-              <CheckCircle2 className="size-3" aria-hidden />
-              {answererCount} 人答题
-            </Badge>
-            {accuracy !== null ? (
-              <Badge variant="outline">{answerCount} 次 · 正确率 {accuracy}%</Badge>
-            ) : null}
+      <CardContent className={cn("flex flex-1 flex-col justify-between", compact ? "gap-3" : "gap-4")}>
+        <div className="space-y-3">
+          <div className="content-metrics">
+            <Stat label="题目" value={questionCount} />
+            <Stat label="订阅" value={subCount} icon={Users} />
+            <Stat label="答题人数" value={answererCount} icon={CheckCircle2} />
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CalendarClock className="size-3.5 text-primary" />
+          {accuracy !== null ? (
+            <div className="label-chip">
+              <CheckCircle2 className="size-3.5" aria-hidden />
+              {answerCount} 次答题，正确率 {accuracy}%
+            </div>
+          ) : null}
+          <div className="label-chip min-w-0">
+            <CalendarClock className="size-3.5 shrink-0 text-primary" aria-hidden />
             <span className="truncate">{scheduleSummary}</span>
           </div>
         </div>
@@ -223,7 +230,7 @@ export function BankCard({
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle className="font-serif">订阅「{title}」</DialogTitle>
+                      <DialogTitle>订阅「{title}」</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
@@ -322,5 +329,27 @@ export function BankCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  icon?: typeof Users;
+}) {
+  return (
+    <div className="content-stat">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {Icon ? <Icon className="size-3.5" aria-hidden /> : null}
+        <span className="truncate">{label}</span>
+      </div>
+      <div className="mt-1 truncate text-base font-semibold text-foreground">
+        {value}
+      </div>
+    </div>
   );
 }

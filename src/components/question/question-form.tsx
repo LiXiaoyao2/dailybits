@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 
 const inputBottomLine =
-  "border-0 border-b rounded-none focus-visible:ring-0 focus-visible:border-primary";
+  "bg-card/80";
 
 const OPTIONS_KEYS = ["A", "B", "C", "D"] as const;
 
@@ -140,7 +140,7 @@ export function QuestionForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 font-serif">
+    <form onSubmit={handleSubmit} className="workbench-panel space-y-6 p-5">
       <div className="space-y-2">
         <Label htmlFor="content">题目内容</Label>
         <Textarea

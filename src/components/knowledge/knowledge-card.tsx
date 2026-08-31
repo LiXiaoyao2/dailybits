@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BookMarked } from "lucide-react";
+import { BookMarked, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
   MAX_KNOWLEDGE_SUBSCRIPTIONS_PER_TARGET,
   MAX_PUSH_TIMES_PER_SUBSCRIPTION,
 } from "@/types";
+import { cn } from "@/lib/utils";
 
 export interface KnowledgeCardProps {
   id: string;
@@ -36,6 +37,7 @@ export interface KnowledgeCardProps {
   targetType?: "USER" | "GROUP";
   targetId?: string;
   onSubscribed?: () => void;
+  compact?: boolean;
 }
 
 export function KnowledgeCard({
@@ -51,6 +53,7 @@ export function KnowledgeCard({
   targetType = "USER",
   targetId,
   onSubscribed,
+  compact = false,
 }: KnowledgeCardProps) {
   const [subscribed, setSubscribed] = useState(isSubscribed);
   const [subCount, setSubCount] = useState(subscriberCount);
@@ -106,26 +109,46 @@ export function KnowledgeCard({
 
   return (
     <Card
-      className="paper-rise card-hover flex flex-col"
+      size={compact ? "sm" : "default"}
+      className={cn(
+        "content-card paper-rise card-hover flex flex-col",
+        compact ? "min-h-[146px]" : "min-h-[200px]",
+      )}
       style={{ animationDelay: `${appearDelayMs}ms` }}
     >
-      <CardHeader className="min-w-0 pb-2">
+      <CardHeader className={cn("min-w-0 pb-2", compact ? "gap-2" : "gap-3")}>
         <Link href={`/knowledge/${id}`} className="block min-w-0 hover:underline">
-          <CardTitle className="flex items-center gap-2 truncate font-serif text-lg" title={title}>
-            <BookMarked className="size-4 shrink-0 text-primary/70" />
+          <CardTitle
+            className={cn(
+              "flex items-center gap-2 truncate font-semibold",
+              compact ? "text-base" : "text-lg",
+            )}
+            title={title}
+          >
+            <BookMarked className="size-4 shrink-0 text-primary" />
             <span className="truncate">{title}</span>
           </CardTitle>
         </Link>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col justify-between gap-3">
-        <div className="space-y-1">
+        <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
             创建者：{creator.name ?? "未知"}
             {creator.uid ? ` (${creator.uid})` : ""}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {pointCount} 张知识卡 · {subCount} 人订阅过
-          </p>
+          <div className="content-metrics content-metrics-2">
+            <div className="content-stat">
+              <div className="text-xs text-muted-foreground">知识卡</div>
+              <div className="mt-1 text-base font-semibold">{pointCount}</div>
+            </div>
+            <div className="content-stat">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users className="size-3.5" aria-hidden />
+                订阅
+              </div>
+              <div className="mt-1 text-base font-semibold">{subCount}</div>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -149,7 +172,7 @@ export function KnowledgeCard({
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle className="font-serif">订阅「{title}」</DialogTitle>
+                      <DialogTitle>订阅「{title}」</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">

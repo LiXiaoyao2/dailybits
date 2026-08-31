@@ -262,7 +262,7 @@ export function DigestSubscriptionList({
   if (loading) {
     return (
       <section className="space-y-4">
-        <h2 className="font-serif text-xl font-semibold">{title}</h2>
+        <h2 className="panel-title text-lg">{title}</h2>
         <div className="grid gap-3 md:grid-cols-2">
           {DIGEST_OPTIONS.map((option) => (
             <Card key={option.type} className="animate-pulse">
@@ -282,7 +282,7 @@ export function DigestSubscriptionList({
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-serif text-xl font-semibold">{title}</h2>
+          <h2 className="panel-title text-lg">{title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {description}
           </p>
@@ -303,7 +303,7 @@ export function DigestSubscriptionList({
           return (
             <Card
               key={option.type}
-              className="paper-rise card-hover"
+              className="content-card paper-rise card-hover"
               style={{ animationDelay: `${index * 70}ms` }}
             >
               <CardHeader className="gap-2">

@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ComponentType } from "react";
 import Link from "next/link";
 import { BarChart3, BookOpenCheck, CheckCircle2, Users } from "lucide-react";
 import { startLogin, useSession } from "@/lib/client-auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MetricLine, PageHeader, WorkbenchPanel } from "@/components/ui/workbench";
 
 interface AdminOverview {
   generatedAt: string;
@@ -89,7 +89,7 @@ export default function AdminPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="flex min-h-[240px] items-center justify-center text-sm text-muted-foreground">
+      <div className="workbench-panel flex min-h-[240px] items-center justify-center text-sm text-muted-foreground">
         加载总览中...
       </div>
     );
@@ -97,7 +97,7 @@ export default function AdminPage() {
 
   if (!session?.user?.isAdmin) {
     return (
-      <div className="page-enter rounded-lg border border-border bg-card p-6">
+      <div className="page-enter workbench-panel p-6">
         <h1 className="text-xl font-semibold">需要管理员权限</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           当前账号没有访问总览的权限。
@@ -110,60 +110,61 @@ export default function AdminPage() {
 
   return (
     <div className="page-enter space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-primary">管理员总览</p>
-          <h1 className="mt-1 text-2xl font-semibold text-foreground">
-            DailyBits 使用情况
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {[7, 14, 30].map((value) => (
-            <Button
-              key={value}
-              variant={days === value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setDays(value)}
-            >
-              {value} 天
-            </Button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title="DailyBits 使用情况"
+        description="跟踪内容规模、活跃订阅、答题人数和题库使用排行。"
+        action={
+          <div className="flex items-center gap-2">
+            {[7, 14, 30].map((value) => (
+              <Button
+                key={value}
+                variant={days === value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDays(value)}
+              >
+                {value} 天
+              </Button>
+            ))}
+          </div>
+        }
+      />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
+      <div className="metric-strip grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricLine
           icon={BookOpenCheck}
           label="内容库"
           value={formatNumber(totals?.banks ?? 0)}
-          detail={`题库 ${formatNumber(totals?.questionBanks ?? 0)} · 知识库 ${formatNumber(totals?.knowledgeBanks ?? 0)}`}
+          detail={`题库 ${formatNumber(totals?.questionBanks ?? 0)}，知识库 ${formatNumber(totals?.knowledgeBanks ?? 0)}`}
         />
-        <MetricCard
+        <MetricLine
           icon={BarChart3}
           label="题目与知识点"
           value={formatNumber((totals?.questions ?? 0) + (totals?.knowledgePoints ?? 0))}
-          detail={`题目 ${formatNumber(totals?.questions ?? 0)} · 知识点 ${formatNumber(totals?.knowledgePoints ?? 0)}`}
+          detail={`题目 ${formatNumber(totals?.questions ?? 0)}，知识点 ${formatNumber(totals?.knowledgePoints ?? 0)}`}
+          tone="ink"
         />
-        <MetricCard
+        <MetricLine
           icon={Users}
           label="今日答题人数"
           value={formatNumber(totals?.todayAnswerers ?? 0)}
-          detail={`${formatNumber(totals?.todayAnswers ?? 0)} 次答题 · 正确率 ${totals?.todayAccuracy ?? 0}%`}
+          detail={`${formatNumber(totals?.todayAnswers ?? 0)} 次答题，正确率 ${totals?.todayAccuracy ?? 0}%`}
+          tone="accent"
         />
-        <MetricCard
+        <MetricLine
           icon={CheckCircle2}
           label={`最近 ${days} 天答题`}
           value={formatNumber(totals?.periodAnswers ?? 0)}
-          detail={`${formatNumber(totals?.periodAnswerers ?? 0)} 人参与 · 活跃订阅 ${formatNumber(totals?.activeSubscriptions ?? 0)}`}
+          detail={`${formatNumber(totals?.periodAnswerers ?? 0)} 人参与，活跃订阅 ${formatNumber(totals?.activeSubscriptions ?? 0)}`}
+          tone="citrine"
         />
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
+      <WorkbenchPanel>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 px-0 pt-0">
           <CardTitle className="text-lg">每日答题趋势</CardTitle>
           <Badge variant="outline">{overview?.timezone ?? "Asia/Shanghai"}</Badge>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pb-0">
           <div className="flex h-52 items-end gap-3 overflow-x-auto pb-2">
             {overview?.daily.map((item) => (
               <div key={item.date} className="flex min-w-16 flex-1 flex-col items-center gap-2">
@@ -179,7 +180,9 @@ export default function AdminPage() {
                         ? { height: `${Math.max(4, (item.answers / maxAnswers) * 128)}px` }
                         : undefined
                     }
-                    title={`${item.date} · ${item.answers} 次 · ${item.answerers} 人`}
+                    tabIndex={0}
+                    aria-label={`${item.date}，${item.answers} 次答题，${item.answerers} 人参与，正确率 ${item.accuracy}%`}
+                    title={`${item.date}，${item.answers} 次，${item.answerers} 人`}
                   />
                 </div>
                 <div className="text-center">
@@ -192,13 +195,13 @@ export default function AdminPage() {
             ))}
           </div>
         </CardContent>
-      </Card>
+      </WorkbenchPanel>
 
-      <Card>
-        <CardHeader>
+      <WorkbenchPanel>
+        <CardHeader className="px-0 pt-0">
           <CardTitle className="text-lg">题库使用量排行</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pb-0">
           {overview?.topBanks.length ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -237,38 +240,7 @@ export default function AdminPage() {
             </p>
           )}
         </CardContent>
-      </Card>
+      </WorkbenchPanel>
     </div>
-  );
-}
-
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-3 pt-5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <Icon className="size-4" />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm text-muted-foreground">{label}</span>
-          <span className="mt-1 block text-2xl font-semibold text-foreground">
-            {value}
-          </span>
-          <span className="mt-1 block truncate text-xs text-muted-foreground">
-            {detail}
-          </span>
-        </span>
-      </CardContent>
-    </Card>
   );
 }

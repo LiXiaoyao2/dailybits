@@ -179,7 +179,7 @@ INNER_API_KEY=...
 
 ## Docker 部署
 
-项目已提供容器化配置，可一键启动 `Web + Scheduler + PostgreSQL`。
+项目已提供容器化配置，可一键启动 `Web + Scheduler + PostgreSQL`。同栈部署和迁库流程见 [docs/deployment-docker-compose.md](docs/deployment-docker-compose.md)。
 
 ### 1. 准备环境变量
 
@@ -195,7 +195,7 @@ cp .env.example .env
 - 或 `PUSH_PROVIDER=card-service`、`CARD_SERVICE_API_BASE`、`CARD_SERVICE_SEND_API_KEY`（题目卡片走 card-service `/send/qa`）
 - `INNER_API_BASE_URL`、`INNER_API_KEY`（资讯摘要和知识卡片走公司 Messaging v1；开发 Mock 可不填真实 Key）
 
-> `docker-compose.yml` 会将 `DATABASE_URL` 覆盖为容器内数据库地址：`postgresql://postgres:postgres@db:5432/dailybits?schema=public`。
+> `docker-compose.yml` 会将应用进程里的 `DATABASE_URL` 覆盖为容器内数据库地址。默认值是 `postgresql://postgres:postgres@db:5432/dailybits?schema=public`，如需自定义可在 `.env` 设置 `POSTGRES_*` 或 `DOCKER_DATABASE_URL`。
 
 ### AI 新闻源
 
@@ -213,6 +213,7 @@ docker compose up --build -d
 
 默认服务：
 
+- `migrate`：一次性执行 Prisma migration，避免 Web 和 Scheduler 同时迁移
 - `app`：Next.js Web 服务（`http://localhost:3000`）
 - `scheduler`：定时推送调度进程
 - `db`：PostgreSQL 16

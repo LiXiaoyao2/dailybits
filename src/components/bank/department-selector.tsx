@@ -142,7 +142,7 @@ export function DepartmentSelector({
                       {item.department.name}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {departmentPathLabel(item)} · {item.department.id}
+                      {departmentPathLabel(item)}，{item.department.id}
                     </span>
                   </span>
                   {selected ? <Check className="size-4 shrink-0 text-primary" /> : null}

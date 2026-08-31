@@ -36,7 +36,15 @@ interface ApiResponse {
   subscriptionCount?: number;
 }
 
-export function BankExplorer() {
+export function BankExplorer({
+  showCreate = true,
+  emptyVariant = "default",
+  layout = "grid",
+}: {
+  showCreate?: boolean;
+  emptyVariant?: "default" | "compact";
+  layout?: "grid" | "list";
+} = {}) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -92,19 +100,20 @@ export function BankExplorer() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="stream-toolbar flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            aria-label="搜索题库"
             placeholder="搜索题库..."
             value={search}
             onChange={handleSearchChange}
-            className="h-10 rounded-md border-border/80 bg-card pl-10 pr-3 shadow-none focus-visible:ring-primary/20"
+            className="h-11 rounded-[var(--radius)] border-border/80 bg-card pl-10 pr-3 shadow-none focus-visible:ring-primary/20"
           />
         </div>
-        {data?.isLoggedIn ? (
+        {data?.isLoggedIn && showCreate ? (
           <Button
-            className="h-10 shrink-0 shadow-md sm:px-5"
+            className="h-11 shrink-0 sm:px-5"
             size="lg"
             render={<Link href="/bank/new" />}
             nativeButton={false}
@@ -120,10 +129,21 @@ export function BankExplorer() {
         <EmptyState
           title="题库暂时加载失败"
           description="稍后刷新页面，或联系管理员检查数据服务状态。"
+          variant={emptyVariant}
         />
       ) : data?.banks.length ? (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="flex items-center justify-between gap-3 text-xs font-medium text-muted-foreground">
+            <span>共 {data.total} 个题库</span>
+            <span>第 {page} / {data.totalPages} 页</span>
+          </div>
+          <div
+            className={
+              layout === "list"
+                ? "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                : "grid grid-cols-1 gap-4 md:grid-cols-2"
+            }
+          >
             {data.banks.map((bank, index) => (
               <div key={bank.id} className="w-full">
                 <BankCard
@@ -144,6 +164,7 @@ export function BankExplorer() {
                   isSubscribed={bank.isSubscribed}
                   subscriptionCount={data?.subscriptionCount ?? 0}
                   appearDelayMs={index * 70}
+                  compact={layout === "list"}
                 />
               </div>
             ))}
@@ -177,12 +198,14 @@ export function BankExplorer() {
         <EmptyState
           title="未找到相关题库"
           description="尝试其他关键词，或创建新的题库"
+          variant={emptyVariant}
         />
       ) : (
         <EmptyState
           title="尚无题库，成为第一个创建者"
           description="创建你的第一个题库，开始每日一题"
           action={{ label: "创建题库", href: "/bank/new" }}
+          variant={emptyVariant}
         />
       )}
     </div>

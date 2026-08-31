@@ -373,10 +373,10 @@ export default function EditKnowledgeBankPage({
 
   return (
     <div className="page-enter space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="editor-hero flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-serif text-2xl font-semibold text-foreground">
+            <h1 className="text-2xl font-semibold text-white">
               {bank.title}
             </h1>
             <Badge variant="secondary">{bank.points.length} 条</Badge>
@@ -388,6 +388,7 @@ export default function EditKnowledgeBankPage({
         <Button
           variant="outline"
           size="sm"
+          className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
           render={<Link href={`/knowledge/${bankId}`} />}
           nativeButton={false}
         >
@@ -398,7 +399,7 @@ export default function EditKnowledgeBankPage({
       {isCreator ? (
         <form
           onSubmit={saveTitle}
-          className="max-w-5xl rounded-lg border bg-card p-4"
+          className="workbench-panel max-w-5xl p-4"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 space-y-1">
@@ -431,7 +432,7 @@ export default function EditKnowledgeBankPage({
 
       <div className="max-w-5xl">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0">
-          <TabsList variant="line" className="h-auto w-full flex-wrap gap-1 py-1">
+          <TabsList variant="line" className="stream-toolbar h-auto w-full flex-wrap gap-1 p-1">
             <TabsTrigger value="manual" className="min-w-[6rem] flex-1">
               添加知识点
             </TabsTrigger>

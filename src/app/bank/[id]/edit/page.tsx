@@ -146,7 +146,7 @@ function JsonImportPanel({
   };
 
   return (
-    <div className="space-y-4 font-serif">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
@@ -256,7 +256,7 @@ function FileUploadPanel({
   };
 
   return (
-    <div className="space-y-6 font-serif">
+    <div className="space-y-6">
       {generatedCount !== null && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
           <p className="text-foreground">
@@ -355,7 +355,7 @@ function TextGeneratePanel({
   };
 
   return (
-    <div className="space-y-6 font-serif">
+    <div className="space-y-6">
       {generatedCount !== null && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
           <p className="text-foreground">
@@ -550,20 +550,20 @@ export default function EditBankPage({
 
   return (
     <div className="page-enter space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-serif text-2xl font-semibold text-foreground">
+      <div className="editor-hero flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold text-white">
           {bank.title}
         </h1>
         <Link
           href={`/bank/${bankId}`}
-          className="text-sm text-primary hover:underline"
+          className="text-sm font-medium text-white/85 hover:text-white hover:underline"
         >
           返回题库
         </Link>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList variant="line" className="w-full flex-wrap gap-1 h-auto py-1">
+        <TabsList variant="line" className="stream-toolbar h-auto w-full flex-wrap gap-1 p-1">
           <TabsTrigger value="settings" className="flex-1 min-w-[4.5rem]">
             设置
           </TabsTrigger>
@@ -586,7 +586,7 @@ export default function EditBankPage({
         <TabsContent value="settings" className="mt-6">
           {isCreator ? (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm">
+              <div className="workbench-panel space-y-5 p-5">
                 <section className="space-y-4">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="size-4 text-primary" />
@@ -639,7 +639,7 @@ export default function EditBankPage({
               </div>
 
               <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
-                <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+                <div className="workbench-panel p-4">
                   <p className="text-sm font-semibold text-foreground">当前发布策略</p>
                   <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                     <div className="rounded-md bg-muted/50 px-3 py-2">
@@ -653,7 +653,7 @@ export default function EditBankPage({
                     <div className="rounded-md bg-muted/50 px-3 py-2">
                       {editSchedule.subscriptionScheduleMode === "CUSTOM"
                         ? "订阅者自定义时间"
-                        : `${editSchedule.subscriptionCadence === "DAILY" ? "每天" : "每周"} · ${editSchedule.subscriptionPushTimes.join("、")}`}
+                        : `${editSchedule.subscriptionCadence === "DAILY" ? "每天" : "每周"}，${editSchedule.subscriptionPushTimes.join("、")}`}
                     </div>
                   </div>
                 </div>
